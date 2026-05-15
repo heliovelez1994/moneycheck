@@ -3,6 +3,7 @@ import {
   BarChart, Bar, AreaChart, Area,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine
 } from "recharts";
+import { supabase } from "./supabaseClient";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const STORAGE_KEY = "fluxo-caixa-v4";
