@@ -84,7 +84,85 @@ const STYLES = `
   ::-webkit-scrollbar { width:4px; height:4px; }
   ::-webkit-scrollbar-track { background:#080e1d; }
   ::-webkit-scrollbar-thumb { background:#1a2744; border-radius:99px; }
-`;
+`
+  @media (max-width: 768px) {
+  body {
+    margin: 0;
+    overflow-x: hidden;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  table {
+    min-width: 620px;
+  }
+
+  h2 {
+    font-size: 18px !important;
+  }
+
+  input,
+  select,
+  button {
+    font-size: 16px !important;
+  }
+
+  [style*="grid-template-columns: 1fr 1fr"] {
+    grid-template-columns: 1fr !important;
+  }
+
+  [style*="display: flex"] {
+    max-width: 100%;
+  }
+
+  [style*="padding: 24px 20px"] {
+    padding: 16px 12px !important;
+  }
+
+  [style*="height: 60px"] {
+    height: auto !important;
+    min-height: 60px;
+    flex-wrap: wrap;
+    padding: 10px 12px !important;
+  }
+
+  [style*="font-size: 36px"] {
+    font-size: 26px !important;
+  }
+
+  [style*="font-size: 40px"] {
+    font-size: 28px !important;
+  }
+
+  [style*="padding: 22px 24px"] {
+    padding: 16px !important;
+  }
+
+  [style*="padding: 18px 20px"] {
+    padding: 14px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  table {
+    min-width: 720px;
+  }
+
+  [style*="padding: 0 20px"] {
+    padding-left: 10px !important;
+    padding-right: 10px !important;
+  }
+
+  [style*="gap: 14px"] {
+    gap: 8px !important;
+  }
+
+  [style*="font-size: 22px"] {
+    font-size: 18px !important;
+  }
+};
 
 // ─── Status pill ──────────────────────────────────────────────────────────────
 function StatusPill({ actual, planned, isReceita=false }) {
