@@ -6,7 +6,6 @@ import {
 import { supabase } from "./supabaseClient";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-const STORAGE_KEY = "fluxo-caixa-v4";
 const MONTHS      = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 const MONTHS_FULL = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
