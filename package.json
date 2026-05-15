@@ -12,4 +12,5 @@
     "lucide-react": "latest",
     "recharts": "latest"
   }
+  "@supabase/supabase-js": "latest"
 }
