@@ -10,7 +10,7 @@
     "vite": "latest",
     "@vitejs/plugin-react": "latest",
     "lucide-react": "latest",
-    "recharts": "latest"
+    "recharts": "latest",
+    "@supabase/supabase-js": "latest"
   }
-  "@supabase/supabase-js": "latest"
 }
