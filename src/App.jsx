@@ -1118,15 +1118,47 @@ export default function App() {
   const [data,setData]     = useState({});
   const [loaded,setLoaded] = useState(false);
 
-  useEffect(()=>{
-    try{ const raw=localStorage.getItem(STORAGE_KEY); if(raw) setData(JSON.parse(raw)); }catch{}
-    setLoaded(true);
-  },[]);
+  useEffect(() => {
+  async function loadData() {
+    const { data: row, error } = await supabase
+      .from("app_state")
+      .select("data")
+      .eq("id", "moneycheck")
+      .single();
 
-  useEffect(()=>{
-    if(!loaded) return;
-    try{ localStorage.setItem(STORAGE_KEY,JSON.stringify(data)); }catch{}
-  },[data,loaded]);
+    if (error && error.code !== "PGRST116") {
+      console.error("Erro ao carregar dados:", error);
+    }
+
+    if (row?.data) {
+      setData(row.data);
+    }
+
+    setLoaded(true);
+  }
+
+  loadData();
+}, []);
+
+useEffect(() => {
+  if (!loaded) return;
+
+  async function saveData() {
+    const { error } = await supabase
+      .from("app_state")
+      .upsert({
+        id: "moneycheck",
+        data,
+        updated_at: new Date().toISOString()
+      });
+
+    if (error) {
+      console.error("Erro ao salvar dados:", error);
+    }
+  }
+
+  saveData();
+}, [data, loaded]);
 
   const yd = data[year] || emptyYear();
   const md = yd.months[month] || emptyMonth();
