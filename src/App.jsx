@@ -1,3 +1,4 @@
+import "./App.css";
 import { useState, useEffect, useCallback } from "react";
 import {
   BarChart, Bar, AreaChart, Area,
