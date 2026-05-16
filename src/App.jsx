@@ -11,7 +11,7 @@ const MONTHS_FULL = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julh
 
 const CATS = {
   receita: ["Salário","13º Salário","PLR","Férias","Abono","Nilce","Cláudio","Outros"],
-  despesa: ["Apartamento","Diarista","Celular","Amortização","Viagem","Outros"],
+  despesa: ["Apartamento","Diarista","Cartão de Crédito","Celular","Amortização","Viagem","Outros"],
 };
 const CAT_ICONS = {
   "Salário":"💼","Cartão de Crédito":"💳","13º Salário":"🎁","PLR":"🏆","Férias":"🌴","Abono":"📋",
