@@ -72,6 +72,20 @@ const glassCard = (accent="#4ade80", extra={}) => ({
   padding:"22px 24px", position:"relative", overflow:"hidden", ...extra
 });
 
+// ─── Global styles ────────────────────────────────────────────────────────────
+const STYLES = `
+  @keyframes fadeUp { from{opacity:0;transform:translateY(10px)} to{opacity:1;transform:translateY(0)} }
+  @keyframes pulse  { 0%,100%{opacity:1} 50%{opacity:.4} }
+  @keyframes glow   { 0%,100%{box-shadow:0 0 8px #4ade8066} 50%{box-shadow:0 0 16px #4ade80aa} }
+  .fade-up  { animation: fadeUp .3s ease both; }
+  .row-hover:hover { background:#0d1a2d !important; transform:translateX(3px); transition:all .15s ease; }
+  .btn-hover:hover { opacity:.82; transform:scale(.96); transition:all .15s; }
+  input:focus, select:focus { border-color:#60a5fa !important; box-shadow:0 0 0 3px #60a5fa1a; }
+  ::-webkit-scrollbar { width:4px; height:4px; }
+  ::-webkit-scrollbar-track { background:#080e1d; }
+  ::-webkit-scrollbar-thumb { background:#1a2744; border-radius:99px; }
+`;
+
 // ─── Status pill ──────────────────────────────────────────────────────────────
 function StatusPill({ actual, planned, isReceita=false }) {
   if (!planned) return null;
@@ -1175,6 +1189,7 @@ useEffect(() => {
 
   return (
     <>
+      <style>{STYLES}</style>
       <div style={{minHeight:"100vh",background:C.bg,
         fontFamily:"'DM Mono','IBM Plex Mono','Courier New',monospace",
         color:C.text,boxSizing:"border-box"}}>
