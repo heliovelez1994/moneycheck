@@ -11,7 +11,7 @@ const MONTHS_FULL = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julh
 
 const CATS = {
   receita: ["Salário","13º Salário","PLR","Férias","Abono","Nilce","Cláudio","Outros"],
-  despesa: ["Apartamento","Diarista","Cartão de Crédito","Celular","Amortização","Viagem","Outros"],
+  despesa: ["Apartamento","Diarista","Celular","Amortização","Viagem","Outros"],
 };
 const CAT_ICONS = {
   "Salário":"💼","Cartão de Crédito":"💳","13º Salário":"🎁","PLR":"🏆","Férias":"🌴","Abono":"📋",
@@ -30,10 +30,11 @@ const catIcon = desc => CAT_ICONS[desc] || "📌";
 function calcMonth(month) {
   const tPR = month.receitas.reduce((s,r)=>s+(r.planned||0),0);
   const tPE = month.despesas.reduce((s,r)=>s+(r.planned||0),0);
-  const tAR = month.receitas.reduce((s,r)=>s+(r.actual!=null?r.actual:(r.planned||0)),0);
-  const tAE = month.despesas.reduce((s,r)=>s+(r.actual!=null?r.actual:(r.planned||0)),0);
-  const tAR_only = month.receitas.reduce((s,r)=>s+(r.actual!=null?r.actual:0),0);
-  const tAE_only = month.despesas.reduce((s,r)=>s+(r.actual!=null?r.actual:0),0);
+  // Apenas valores explicitamente realizados
+  const tAR = month.receitas.reduce((s,r)=>s+(r.actual!=null?r.actual:0),0);
+  const tAE = month.despesas.reduce((s,r)=>s+(r.actual!=null?r.actual:0),0);
+  const tAR_only = tAR;
+  const tAE_only = tAE;
   return { tPR, tPE, tAR, tAE, tAR_only, tAE_only, planned:tPR-tPE, actual:tAR-tAE };
 }
 
@@ -337,7 +338,7 @@ function EntryRow({ entry, type, onUpdate, onDelete }) {
 }
 
 // ─── Credit Card Widget ───────────────────────────────────────────────────────
-function CreditCardWidget({ monthData, onUpdateMonth }) {
+function CreditCardWidget({ monthData, onUpdateMonth, monthIdx, allYearData, onUpdateYear }) {
   const [newCharge,setNewCharge] = useState("");
   const [newCat,setNewCat]       = useState("");
   const [editPlan,setEditPlan]   = useState(false);
@@ -352,19 +353,45 @@ function CreditCardWidget({ monthData, onUpdateMonth }) {
   const pct          = Math.min(pctRaw,100);
   const barColor     = pctRaw>100?C.red:pctRaw>=90?C.orange:pctRaw>=75?C.yellow:C.green;
 
+  // Sincroniza ccCharges no mês atual E lança o actual no mês SEGUINTE (mês de pagamento da fatura)
   const syncDespesas = (newCharges, newPlanned) => {
     const total = newCharges.reduce((s,c)=>s+c.value,0);
+
+    // 1. Atualiza ccCharges e o planejado do cartão no mês atual (sem mexer no actual deste mês)
     let newDesp = [...monthData.despesas];
     const idx   = newDesp.findIndex(e=>e.desc==="Cartão de Crédito");
-    const entry = {
+    const curEntry = {
       id: idx>=0?newDesp[idx].id:uid(),
       desc:"Cartão de Crédito",
       planned: newPlanned!=null?newPlanned:(idx>=0?newDesp[idx].planned:0),
-      actual:  newCharges.length>0?total:null,
+      actual:  null, // no mês dos gastos, NÃO é realizado ainda
       recurrent:false,
     };
-    if(idx>=0) newDesp[idx]=entry; else newDesp.push(entry);
-    onUpdateMonth({...monthData, ccCharges:newCharges, despesas:newDesp});
+    if(idx>=0) newDesp[idx]=curEntry; else newDesp.push(curEntry);
+    const updatedCurrentMonth = {...monthData, ccCharges:newCharges, despesas:newDesp};
+
+    // 2. Lança o total como actual no mês SEGUINTE (fatura)
+    if(monthIdx < 11 && allYearData && onUpdateYear) {
+      const nextMonthIdx = monthIdx + 1;
+      const updatedYear = { months: {...allYearData.months} };
+      updatedYear.months[monthIdx] = updatedCurrentMonth;
+
+      const nextMonth = {...(updatedYear.months[nextMonthIdx]||emptyMonth())};
+      let nextDesp = [...nextMonth.despesas];
+      const nextIdx = nextDesp.findIndex(e=>e.desc==="Cartão de Crédito");
+      const nextEntry = {
+        id: nextIdx>=0?nextDesp[nextIdx].id:uid(),
+        desc:"Cartão de Crédito",
+        planned: nextIdx>=0?nextDesp[nextIdx].planned:0,
+        actual: total>0?total:null,
+        recurrent:false,
+      };
+      if(nextIdx>=0) nextDesp[nextIdx]=nextEntry; else nextDesp.push(nextEntry);
+      updatedYear.months[nextMonthIdx] = {...nextMonth, despesas:nextDesp};
+      onUpdateYear(updatedYear);
+    } else {
+      onUpdateMonth(updatedCurrentMonth);
+    }
   };
 
   const addCharge = () => {
@@ -553,7 +580,7 @@ function MonthPanel({ monthData, monthIdx, year, onUpdateMonth, cumPlanned, cumA
 
   const stats    = calcMonthForDisplay(monthData, year, monthIdx);
   const expPct   = stats.tPE>0?(stats.tAE/stats.tPE)*100:0;
-  const alertColor = expPct>=100?C.red:expPct>=90?C.orange:expPct>=75?C.yellow:C.green;
+  const alertColor = expPct>100?C.red:expPct>=90?C.orange:expPct>=75?C.yellow:C.green;
 
   const add = () => {
     if(!desc||!val) return;
@@ -606,7 +633,8 @@ function MonthPanel({ monthData, monthIdx, year, onUpdateMonth, cumPlanned, cumA
   return (
     <div className="fade-up">
       {/* Credit Card Widget - always at the top */}
-      <CreditCardWidget monthData={monthData} onUpdateMonth={onUpdateMonth}/>
+      <CreditCardWidget monthData={monthData} onUpdateMonth={onUpdateMonth}
+        monthIdx={monthIdx} allYearData={allYearData} onUpdateYear={onUpdateYear}/>
 
       <BalanceHero planned={stats.planned} actual={stats.actual}
         cumPlanned={cumPlanned} cumActual={cumActual} monthLabel={MONTHS[monthIdx]}/>
@@ -635,13 +663,12 @@ function MonthPanel({ monthData, monthIdx, year, onUpdateMonth, cumPlanned, cumA
       {!showAdd ? (
         <button onClick={()=>setShowAdd(true)} className="btn-hover"
           style={{width:"100%",padding:"18px",
-          background:`linear-gradient(135deg,${C.green}18,${C.blue}10)`,
-          border:`2px solid ${C.green}55`,borderRadius:14,
-          color:C.green,fontSize:16,fontWeight:900,cursor:"pointer",
+          background:`${C.surface}`,
+          border:`2px dashed ${C.border}`,borderRadius:14,
+          color:C.textDim,fontSize:16,fontWeight:700,cursor:"pointer",
           fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:10,
-          marginBottom:14,transition:"all .2s",
-          boxShadow:`0 0 18px ${C.green}22`,letterSpacing:0.5}}>
-          <span style={{fontSize:24,lineHeight:1}}>＋</span> Adicionar Lançamento
+          marginBottom:14,transition:"all .2s",letterSpacing:0.3}}>
+          <span style={{fontSize:22,lineHeight:1}}>＋</span> Adicionar Lançamento
         </button>
       ) : (
         <div style={{background:C.card,border:`1px solid ${C.blue}44`,
@@ -1015,19 +1042,29 @@ function AnnualView({ yearData, year }) {
             <tbody>
               {rows.map((r,i)=>{
                 const dev=r.cumA-r.cumP;
+                const isFuture = isFutureMonth(year, i);
+                const colVal  = isFuture ? C.textFaint : (r.actual>=0  ? C.green : C.red);
+                const colCum  = isFuture ? C.textFaint : (r.cumA>=0    ? C.green : C.red);
+                const colDev  = isFuture ? C.textFaint : (dev>=0       ? C.green : C.red);
                 return (
-                  <tr key={i} className="row-hover" style={{borderBottom:`1px solid ${C.border}1a`}}>
-                    <td style={{padding:"12px 14px",color:C.text,fontWeight:700,fontSize:14}}>{MONTHS_FULL[i]}</td>
-                    <td style={{padding:"12px 14px",fontSize:14,fontWeight:700,color:C.green}}>{fmt(r.actual)}</td>
-                    <td style={{padding:"12px 14px",fontSize:14,fontWeight:800,color:C.green}}>{fmt(r.cumA)}</td>
-                    <td style={{padding:"12px 14px",fontSize:14,fontWeight:800,color:dev>=0?C.green:C.red}}>
+                  <tr key={i} className="row-hover" style={{borderBottom:`1px solid ${C.border}1a`,
+                    opacity: isFuture ? 0.55 : 1}}>
+                    <td style={{padding:"12px 14px",color:isFuture?C.textDim:C.text,fontWeight:700,fontSize:14}}>
+                      {MONTHS_FULL[i]}{isFuture && <span style={{fontSize:10,color:C.textFaint,marginLeft:6}}>planejado</span>}
+                    </td>
+                    <td style={{padding:"12px 14px",fontSize:14,fontWeight:700,color:colVal}}>{fmt(r.actual)}</td>
+                    <td style={{padding:"12px 14px",fontSize:14,fontWeight:800,color:colCum}}>{fmt(r.cumA)}</td>
+                    <td style={{padding:"12px 14px",fontSize:14,fontWeight:800,color:colDev}}>
                       <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
-                        <span>{dev>=0?"📈":"📉"}</span>{fmt(Math.abs(dev))}
+                        {!isFuture && <span>{dev>=0?"📈":"📉"}</span>}{fmt(Math.abs(dev))}
                       </span>
                     </td>
                     <td style={{padding:"12px 14px"}}>
-                      {r.tPE>0?<StatusPill actual={r.tAE} planned={r.tPE} isReceita={false}/>:
-                        <span style={{color:C.border,fontSize:12}}>—</span>}
+                      {isFuture
+                        ? <span style={{color:C.textFaint,fontSize:12}}>—</span>
+                        : r.tPE>0
+                          ? <StatusPill actual={r.tAE} planned={r.tPE} isReceita={false}/>
+                          : <span style={{color:C.border,fontSize:12}}>—</span>}
                     </td>
                   </tr>
                 );
