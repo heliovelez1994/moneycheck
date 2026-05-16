@@ -10,14 +10,13 @@ const MONTHS      = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out"
 const MONTHS_FULL = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
 const CATS = {
-  receita: ["Salário","Conta","13º Salário","PLR","Férias","Abono","Itaú","Nilce","Cláudio","Outros"],
-  despesa: ["Apartamento","Nubank","Diarista","Celular","Itaú","Amortização","Viagem","Discos","Outros"],
+  receita: ["Salário","13º Salário","PLR","Férias","Abono","Nilce","Cláudio","Outros"],
+  despesa: ["Apartamento","Diarista","Celular","Amortização","Viagem","Outros"],
 };
 const CAT_ICONS = {
-  "Salário":"💼","Conta":"🏦","13º Salário":"🎁","PLR":"🏆","Férias":"🌴","Abono":"📋",
-  "Nilce":"👤","Cláudio":"👤","Apartamento":"🏠","Nubank":"💳","Diarista":"🧹",
-  "Celular":"📱","Amortização":"🏗️","Viagem":"✈️","Discos":"💿","Outros":"📦","Itaú":"🏛️",
-  "Cartão de Crédito":"💳",
+  "Salário":"💼","Cartão de Crédito":"💳","13º Salário":"🎁","PLR":"🏆","Férias":"🌴","Abono":"📋",
+  "Nilce":"👤","Cláudio":"👤","Apartamento":"🏠","Diarista":"🧹","Celular":"📱","Amortização":"🏠","Viagem":"✈️","Outros":"📦",
+  
 };
 
 // ─── Data helpers ─────────────────────────────────────────────────────────────
@@ -100,10 +99,8 @@ function StatusPill({ actual, planned, isReceita=false }) {
   } else {
     // despesa: menos é melhor
     [bg,tx,label,ico] =
-      v>=100 ? [C.redDim,    C.red,    "Excedido","🚨"] :
-      v>=90  ? ["#fb923c22", C.orange, "Crítico", "⚠️"] :
-      v>=75  ? ["#fbbf2422", C.yellow, "Atenção", "🔔"] :
-               [C.greenDim,  C.green,  "OK",      "✅"];
+      v>100 ? [C.redDim,    C.red,    "Excedido","🚨"] :
+      v<=100  ? [C.greenDim,  C.green,  "OK", "✅"];
   }
   return (
     <span style={{display:"inline-flex",alignItems:"center",gap:5,background:bg,color:tx,
