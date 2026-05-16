@@ -266,12 +266,15 @@ function BalanceHero({ planned, actual, cumPlanned, cumActual, monthLabel }) {
 function EntryRow({ entry, type, onUpdate, onDelete }) {
   const [editing,setEditing] = useState(false);
   const [ld,setLd] = useState(entry.desc);
-  const [lp,setLp] = useState(entry.planned||"");
-  const [la,setLa] = useState(entry.actual!=null?entry.actual:"");
+  const [lp,setLp] = useState(entry.planned!=null?String(entry.planned):"");
+  const [la,setLa] = useState(entry.actual!=null?String(entry.actual):"");
+
+  useEffect(()=>{ setLp(entry.planned!=null?String(entry.planned):""); },[entry.planned]);
+  useEffect(()=>{ setLa(entry.actual!=null?String(entry.actual):""); },[entry.actual]);
 
   const save = () => {
-    const plannedVal = parseFloat(lp)||0;
-    const actualVal  = la!==""?parseFloat(la):plannedVal;
+    const plannedVal = lp!==""?parseFloat(lp):0;
+    const actualVal  = la!==""?parseFloat(la):null;
     onUpdate(entry.id,{desc:ld,planned:plannedVal,actual:actualVal});
     setEditing(false);
   };
@@ -526,33 +529,33 @@ function CreditCardWidget({ monthData, onUpdateMonth, monthIdx, allYearData, onU
         )}
 
         {/* Quick-add */}
-        <div className="cc-quick-add" style={{display:"flex",gap:10,alignItems:"stretch",flexWrap:"wrap",marginBottom:14}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,flex:"1 1 140px",minWidth:140,
-            background:C.surface,border:`1px solid #3b82f655`,borderRadius:10,padding:"0 14px"}}>
-            <span style={{fontSize:15,color:C.textDim,fontWeight:700}}>R$</span>
+        <div className="cc-quick-add" style={{display:"flex",gap:8,alignItems:"stretch",flexWrap:"wrap",marginBottom:12}}>
+          <div style={{display:"flex",alignItems:"center",gap:6,flex:"0 1 120px",minWidth:100,
+            background:C.surface,border:`1px solid #3b82f655`,borderRadius:9,padding:"0 10px"}}>
+            <span style={{fontSize:13,color:C.textDim,fontWeight:700}}>R$</span>
             <input type="number" value={newCharge} onChange={e=>setNewCharge(e.target.value)}
               placeholder="Valor"
               style={{background:"transparent",border:"none",outline:"none",color:C.text,
-                fontSize:15,fontFamily:"inherit",padding:"12px 0",flex:1,fontWeight:600}}
+                fontSize:13,fontFamily:"inherit",padding:"9px 0",flex:1,fontWeight:600}}
               onKeyDown={e=>e.key==="Enter"&&addCharge()}/>
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:8,flex:"1 1 160px",minWidth:160,
-            background:C.surface,border:`1px solid #3b82f655`,borderRadius:10,padding:"0 14px"}}>
-            <span style={{fontSize:14,color:C.textDim}}>🏷️</span>
+          <div style={{display:"flex",alignItems:"center",gap:6,flex:"1 1 130px",minWidth:120,
+            background:C.surface,border:`1px solid #3b82f655`,borderRadius:9,padding:"0 10px"}}>
+            <span style={{fontSize:13,color:C.textDim}}>🏷️</span>
             <input list="cc-cats" value={newCat} onChange={e=>setNewCat(e.target.value)}
-              placeholder="Categoria (ex: Restaurante)"
+              placeholder="Categoria"
               style={{background:"transparent",border:"none",outline:"none",color:C.text,
-                fontSize:14,fontFamily:"inherit",padding:"12px 0",flex:1}}
+                fontSize:13,fontFamily:"inherit",padding:"9px 0",flex:1}}
               onKeyDown={e=>e.key==="Enter"&&addCharge()}/>
             <datalist id="cc-cats">
               {usedCats.map(c=><option key={c} value={c}/>)}
             </datalist>
           </div>
           <button onClick={addCharge} className="btn-hover"
-            style={{background:"#3b82f622",border:"1px solid #3b82f655",borderRadius:10,
-            color:C.blue,padding:"0 20px",cursor:"pointer",fontFamily:"inherit",
-            fontSize:14,fontWeight:800,display:"flex",alignItems:"center",gap:7,whiteSpace:"nowrap"}}>
-            <span style={{fontSize:18}}>＋</span> Adicionar
+            style={{background:"#3b82f622",border:"1px solid #3b82f655",borderRadius:9,
+            color:C.blue,padding:"0 14px",cursor:"pointer",fontFamily:"inherit",
+            fontSize:13,fontWeight:800,display:"flex",alignItems:"center",gap:5,whiteSpace:"nowrap"}}>
+            <span style={{fontSize:16}}>＋</span> Add
           </button>
         </div>
 
@@ -1096,19 +1099,7 @@ function AnnualView({ yearData, year }) {
                 );
               })}
             </tbody>
-            <tfoot>
-              <tr style={{background:`${C.green}08`,borderTop:`2px solid ${C.border}`}}>
-                <td style={{padding:"13px 14px",fontWeight:900,color:C.text,fontSize:14}}>🏆 TOTAL ANUAL</td>
-                <td style={{padding:"13px 14px",fontWeight:900,fontSize:14,color:C.green}}>{fmt(annAct)}</td>
-                <td style={{padding:"13px 14px",fontWeight:900,fontSize:14,color:C.green}}>{fmt(annAct)}</td>
-                <td style={{padding:"13px 14px",fontWeight:900,fontSize:14,color:annDev>=0?C.green:C.red}}>
-                  <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
-                    <span>{annDev>=0?"📈":"📉"}</span>{fmt(Math.abs(annDev))}
-                  </span>
-                </td>
-                <td style={{padding:"13px 14px"}}><StatusPill actual={totalAE} planned={totalPE} isReceita={false}/></td>
-              </tr>
-            </tfoot>
+
           </table>
         </div>
       </div>
@@ -1161,49 +1152,7 @@ function AnnualView({ yearData, year }) {
               );
             })}
           </div>
-          {/* Mini tabela resumo */}
-          <div style={{borderTop:`1px solid ${C.border}`,overflowX:"auto"}}>
-            <table style={{width:"100%",borderCollapse:"collapse",minWidth:380}}>
-              <thead>
-                <tr style={{background:"#05080f"}}>
-                  {["Categoria","Gasto no Ano","%"].map(h=>(
-                    <th key={h} style={{padding:"9px 16px",textAlign:"left",fontSize:11,
-                      color:C.textDim,fontWeight:700,letterSpacing:0.6}}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {ccCats.map(({cat,val,pct},idx)=>(
-                  <tr key={cat} className="row-hover" style={{borderBottom:`1px solid ${C.border}1a`}}>
-                    <td style={{padding:"10px 16px"}}>
-                      <div style={{display:"flex",alignItems:"center",gap:8}}>
-                        <div style={{width:8,height:8,borderRadius:99,
-                          background:catColors[idx%catColors.length],flexShrink:0}}/>
-                        <span style={{fontSize:14,color:C.textMid,fontWeight:600}}>{cat}</span>
-                      </div>
-                    </td>
-                    <td style={{padding:"10px 16px",fontSize:14,fontWeight:800,color:C.red}}>{fmt(val)}</td>
-                    <td style={{padding:"10px 16px"}}>
-                      <span style={{fontSize:13,fontWeight:700,
-                        color:catColors[idx%catColors.length],
-                        background:`${catColors[idx%catColors.length]}18`,
-                        border:`1px solid ${catColors[idx%catColors.length]}33`,
-                        borderRadius:99,padding:"3px 11px"}}>
-                        {pct.toFixed(0)}%
-                      </span>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr style={{background:`${C.red}08`,borderTop:`2px solid ${C.border}`}}>
-                  <td style={{padding:"11px 16px",fontWeight:900,color:C.text,fontSize:14}}>TOTAL</td>
-                  <td style={{padding:"11px 16px",fontWeight:900,fontSize:14,color:C.red}}>{fmt(ccTotal)}</td>
-                  <td style={{padding:"11px 16px",fontWeight:900,fontSize:14,color:C.textDim}}>100%</td>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
+
         </div>
       )}
     </div>
