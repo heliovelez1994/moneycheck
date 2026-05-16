@@ -32,13 +32,38 @@ function calcMonth(month) {
   const tPE = month.despesas.reduce((s,r)=>s+(r.planned||0),0);
   const tAR = month.receitas.reduce((s,r)=>s+(r.actual!=null?r.actual:(r.planned||0)),0);
   const tAE = month.despesas.reduce((s,r)=>s+(r.actual!=null?r.actual:(r.planned||0)),0);
-  return { tPR, tPE, tAR, tAE, planned:tPR-tPE, actual:tAR-tAE };
+  const tAR_only = month.receitas.reduce((s,r)=>s+(r.actual!=null?r.actual:0),0);
+  const tAE_only = month.despesas.reduce((s,r)=>s+(r.actual!=null?r.actual:0),0);
+  return { tPR, tPE, tAR, tAE, tAR_only, tAE_only, planned:tPR-tPE, actual:tAR-tAE };
 }
 
-function calcCumulative(yearData, upToMonth) {
+// Retorna true se o mês/ano é estritamente no futuro (após o mês atual)
+const _today = new Date();
+function isFutureMonth(year, monthIdx) {
+  const curYear  = _today.getFullYear();
+  const curMonth = _today.getMonth();
+  return year > curYear || (year === curYear && monthIdx > curMonth);
+}
+
+// calcMonth com zeragem de meses futuros sem realizado
+function calcMonthForDisplay(month, year, monthIdx) {
+  const base = calcMonth(month);
+  if (isFutureMonth(year, monthIdx)) {
+    // Mês futuro sem nenhum realizado: zerar actual
+    const hasAnyActual =
+      month.receitas.some(r=>r.actual!=null) ||
+      month.despesas.some(r=>r.actual!=null);
+    if (!hasAnyActual) {
+      return { ...base, tAR:0, tAE:0, tAR_only:0, tAE_only:0, actual:0 };
+    }
+  }
+  return base;
+}
+
+function calcCumulative(yearData, upToMonth, year) {
   let cumPlanned=0, cumActual=0;
   for(let i=0;i<=upToMonth;i++){
-    const s=calcMonth(yearData.months[i]||emptyMonth());
+    const s=calcMonthForDisplay(yearData.months[i]||emptyMonth(), year, i);
     cumPlanned+=s.planned; cumActual+=s.actual;
   }
   return { cumPlanned, cumActual };
@@ -99,8 +124,8 @@ function StatusPill({ actual, planned, isReceita=false }) {
   } else {
     // despesa: menos é melhor
     [bg,tx,label,ico] =
-      v>100 ? [C.redDim,    C.red,    "Excedido","🚨"] :
-      v<=100  ? [C.greenDim,  C.green,  "OK", "✅"];
+      v>100 ? [C.redDim, C.red, "Excedido","🚨"] :
+              [C.greenDim, C.green, "OK", "✅"];
   }
   return (
     <span style={{display:"inline-flex",alignItems:"center",gap:5,background:bg,color:tx,
@@ -526,7 +551,7 @@ function MonthPanel({ monthData, monthIdx, year, onUpdateMonth, cumPlanned, cumA
   const [repeatMode,setRepeatMode] = useState("months"); // "months" | "forever"
   const [repeatCount,setRepeatCount] = useState(3);
 
-  const stats    = calcMonth(monthData);
+  const stats    = calcMonthForDisplay(monthData, year, monthIdx);
   const expPct   = stats.tPE>0?(stats.tAE/stats.tPE)*100:0;
   const alertColor = expPct>=100?C.red:expPct>=90?C.orange:expPct>=75?C.yellow:C.green;
 
@@ -604,21 +629,6 @@ function MonthPanel({ monthData, monthIdx, year, onUpdateMonth, cumPlanned, cumA
         </div>
         <ProgressBar actual={stats.tAR} planned={stats.tPR} label="Receitas realizadas" ico="💰" isReceita={true}/>
         <ProgressBar actual={stats.tAE} planned={stats.tPE} label="Despesas realizadas" ico="💸" isReceita={false}/>
-
-        <div style={{display:"flex",gap:28,marginTop:12,paddingTop:14,
-          borderTop:`1px solid ${C.border}`,flexWrap:"wrap"}}>
-          {[
-            {label:"Saldo do mês",val:stats.actual,color:C.blue},
-            {label:"Acumulado",   val:cumActual,   color:C.purple},
-            {label:"Receitas",    val:stats.tAR,   color:C.green},
-            {label:"Despesas",    val:stats.tAE,   color:C.red},
-          ].map(({label,val,color})=>(
-            <div key={label}>
-              <div style={{fontSize:12,color:C.textDim,marginBottom:3,fontWeight:600}}>{label}</div>
-              <div style={{fontSize:17,fontWeight:900,color}}>{fmt(val)}</div>
-            </div>
-          ))}
-        </div>
       </div>
 
       {/* Add entry - acima das tabelas com destaque */}
@@ -791,8 +801,8 @@ function MonthPanel({ monthData, monthIdx, year, onUpdateMonth, cumPlanned, cumA
       {/* Tables */}
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
         {[
-          {type:"receita",label:"Receitas",ico:"💰",items:[...monthData.receitas].sort((a,b)=>(b.actual??b.planned)-(a.actual??a.planned)),color:C.green,tp:stats.tPR,ta:stats.tAR},
-          {type:"despesa",label:"Despesas",ico:"💸",items:[...monthData.despesas].sort((a,b)=>(b.actual??b.planned)-(a.actual??a.planned)),color:C.red,  tp:stats.tPE,ta:stats.tAE},
+          {type:"receita",label:"Receitas",ico:"💰",items:[...monthData.receitas].sort((a,b)=>(b.actual??b.planned)-(a.actual??a.planned)),color:C.green,tp:stats.tPR,ta:stats.tAR_only},
+          {type:"despesa",label:"Despesas",ico:"💸",items:[...monthData.despesas].sort((a,b)=>(b.actual??b.planned)-(a.actual??a.planned)),color:C.red,  tp:stats.tPE,ta:stats.tAE_only},
         ].map(({type,label,ico,items,color,tp,ta})=>(
           <div key={type} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,overflow:"hidden",minWidth:0}}>
             <div style={{background:`${color}0d`,padding:"14px 16px",borderBottom:`1px solid ${C.border}`,
@@ -872,14 +882,15 @@ function MonthPanel({ monthData, monthIdx, year, onUpdateMonth, cumPlanned, cumA
 }
 
 // ─── Annual View ──────────────────────────────────────────────────────────────
-function AnnualView({ yearData }) {
+function AnnualView({ yearData, year }) {
   let cumP=0, cumA=0;
   const rows = MONTHS.map((m,i)=>{
-    const s=calcMonth(yearData.months[i]||emptyMonth());
+    const s=calcMonthForDisplay(yearData.months[i]||emptyMonth(), year, i);
     cumP+=s.planned; cumA+=s.actual;
     return {...s,m,i,cumP,cumA};
   });
   const totalPR=rows.reduce((s,r)=>s+r.tPR,0), totalPE=rows.reduce((s,r)=>s+r.tPE,0);
+  // Realizado acumulado só até mês atual
   const totalAR=rows.reduce((s,r)=>s+r.tAR,0), totalAE=rows.reduce((s,r)=>s+r.tAE,0);
   const annPlan=totalPR-totalPE, annAct=totalAR-totalAE, annDev=annAct-annPlan;
   const areaData=rows.map(r=>({name:r.m,"Acum. Plan.":Math.round(r.cumP),"Acum. Real.":Math.round(r.cumA)}));
@@ -903,25 +914,36 @@ function AnnualView({ yearData }) {
   return (
     <div className="fade-up">
       <div style={{display:"flex",gap:16,marginBottom:22,flexWrap:"wrap"}}>
-        {[
-          {title:"Saldo Anual Planejado",ico:"🗓️",val:annPlan,acc:C.green,
-            sub:`💰 ${fmt(totalPR)}   💸 ${fmt(totalPE)}`},
-          {title:"Saldo Anual Realizado",ico:"📈",val:annAct,acc:C.purple,
-            sub:`Desvio: ${annDev>=0?"▲":"▼"} ${fmt(Math.abs(annDev))}`},
-        ].map(({title,ico,val,acc,sub})=>(
-          <div key={title} style={{...glassCard(acc,{flex:1,minWidth:0})}}>
-            <div style={{position:"absolute",top:-50,right:-50,width:180,height:180,borderRadius:"50%",
-              background:`radial-gradient(circle,${acc}18,transparent 70%)`,pointerEvents:"none"}}/>
-            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
-              <div style={{width:36,height:36,borderRadius:11,background:`${acc}25`,
-                display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>{ico}</div>
-              <span style={{fontSize:12,color:acc,fontWeight:800,letterSpacing:1,textTransform:"uppercase"}}>{title}</span>
-            </div>
-            <div style={{fontSize:40,fontWeight:900,lineHeight:1,marginBottom:10,
-              color:val>=0?acc:C.red,textShadow:`0 0 28px ${val>=0?acc:C.red}55`}}>{fmt(val)}</div>
-            <div style={{fontSize:14,color:C.textMid,fontWeight:600}}>{sub}</div>
+        {/* Realizado primeiro, em verde */}
+        <div style={{...glassCard(C.green,{flex:1,minWidth:0})}}>
+          <div style={{position:"absolute",top:-50,right:-50,width:180,height:180,borderRadius:"50%",
+            background:`radial-gradient(circle,${C.green}18,transparent 70%)`,pointerEvents:"none"}}/>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+            <div style={{width:36,height:36,borderRadius:11,background:`${C.green}25`,
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>📈</div>
+            <span style={{fontSize:12,color:C.green,fontWeight:800,letterSpacing:1,textTransform:"uppercase"}}>Saldo Anual Realizado</span>
           </div>
-        ))}
+          <div style={{fontSize:40,fontWeight:900,lineHeight:1,marginBottom:10,
+            color:annAct>=0?C.green:C.red,textShadow:`0 0 28px ${annAct>=0?C.green:C.red}55`}}>{fmt(annAct)}</div>
+          <div style={{fontSize:14,color:C.textMid,fontWeight:600}}>
+            Desvio: {annDev>=0?"▲":"▼"} {fmt(Math.abs(annDev))}
+          </div>
+        </div>
+        {/* Planejado segundo, em cinza */}
+        <div style={{...glassCard(C.textDim,{flex:1,minWidth:0})}}>
+          <div style={{position:"absolute",top:-50,right:-50,width:180,height:180,borderRadius:"50%",
+            background:`radial-gradient(circle,${C.textDim}10,transparent 70%)`,pointerEvents:"none"}}/>
+          <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16}}>
+            <div style={{width:36,height:36,borderRadius:11,background:`${C.textDim}20`,
+              display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>🗓️</div>
+            <span style={{fontSize:12,color:C.textDim,fontWeight:800,letterSpacing:1,textTransform:"uppercase"}}>Saldo Anual Planejado</span>
+          </div>
+          <div style={{fontSize:40,fontWeight:900,lineHeight:1,marginBottom:10,
+            color:C.textDim}}>{fmt(annPlan)}</div>
+          <div style={{fontSize:14,color:C.textFaint,fontWeight:600}}>
+            💰 {fmt(totalPR)}   💸 {fmt(totalPE)}
+          </div>
+        </div>
       </div>
 
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:18}}>
@@ -981,10 +1003,10 @@ function AnnualView({ yearData }) {
           </span>
         </div>
         <div style={{overflowX:"auto"}}>
-          <table style={{width:"100%",borderCollapse:"collapse",minWidth:660}}>
+          <table style={{width:"100%",borderCollapse:"collapse",minWidth:400}}>
             <thead>
               <tr style={{background:"#05080f"}}>
-                {["📅 Mês","Saldo Plan.","Saldo Real.","Acum. Plan.","Acum. Real.","Desvio Acum.","💸 Gastos"].map(h=>(
+                {["📅 Mês","Saldo Real.","Acum. Real.","Desvio Acum.","💸 Gastos"].map(h=>(
                   <th key={h} style={{padding:"11px 14px",textAlign:"left",fontSize:11,
                     color:C.textDim,fontWeight:700,letterSpacing:0.6,whiteSpace:"nowrap"}}>{h}</th>
                 ))}
@@ -996,10 +1018,8 @@ function AnnualView({ yearData }) {
                 return (
                   <tr key={i} className="row-hover" style={{borderBottom:`1px solid ${C.border}1a`}}>
                     <td style={{padding:"12px 14px",color:C.text,fontWeight:700,fontSize:14}}>{MONTHS_FULL[i]}</td>
-                    <td style={{padding:"12px 14px",fontSize:14,fontWeight:700,color:C.textDim}}>{fmt(r.planned)}</td>
-                    <td style={{padding:"12px 14px",fontSize:14,fontWeight:700,color:C.blue}}>{fmt(r.actual)}</td>
-                    <td style={{padding:"12px 14px",fontSize:14,fontWeight:700,color:C.textDim}}>{fmt(r.cumP)}</td>
-                    <td style={{padding:"12px 14px",fontSize:14,fontWeight:800,color:C.purple}}>{fmt(r.cumA)}</td>
+                    <td style={{padding:"12px 14px",fontSize:14,fontWeight:700,color:C.green}}>{fmt(r.actual)}</td>
+                    <td style={{padding:"12px 14px",fontSize:14,fontWeight:800,color:C.green}}>{fmt(r.cumA)}</td>
                     <td style={{padding:"12px 14px",fontSize:14,fontWeight:800,color:dev>=0?C.green:C.red}}>
                       <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
                         <span>{dev>=0?"📈":"📉"}</span>{fmt(Math.abs(dev))}
@@ -1016,10 +1036,8 @@ function AnnualView({ yearData }) {
             <tfoot>
               <tr style={{background:`${C.green}08`,borderTop:`2px solid ${C.border}`}}>
                 <td style={{padding:"13px 14px",fontWeight:900,color:C.text,fontSize:14}}>🏆 TOTAL ANUAL</td>
-                <td style={{padding:"13px 14px",fontWeight:900,fontSize:14,color:C.textDim}}>{fmt(annPlan)}</td>
-                <td style={{padding:"13px 14px",fontWeight:900,fontSize:14,color:C.blue}}>{fmt(annAct)}</td>
-                <td style={{padding:"13px 14px",fontWeight:900,fontSize:14,color:C.textDim}}>{fmt(annPlan)}</td>
-                <td style={{padding:"13px 14px",fontWeight:900,fontSize:14,color:C.purple}}>{fmt(annAct)}</td>
+                <td style={{padding:"13px 14px",fontWeight:900,fontSize:14,color:C.green}}>{fmt(annAct)}</td>
+                <td style={{padding:"13px 14px",fontWeight:900,fontSize:14,color:C.green}}>{fmt(annAct)}</td>
                 <td style={{padding:"13px 14px",fontWeight:900,fontSize:14,color:annDev>=0?C.green:C.red}}>
                   <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
                     <span>{annDev>=0?"📈":"📉"}</span>{fmt(Math.abs(annDev))}
@@ -1197,7 +1215,7 @@ useEffect(() => {
     setData(prev=>({...prev,[year]:newYearData}));
   },[year]);
 
-  const {cumPlanned,cumActual} = calcCumulative(yd,month);
+  const {cumPlanned,cumActual} = calcCumulative(yd,month,year);
 
   if(!loaded) return(
     <div style={{display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",
@@ -1257,7 +1275,7 @@ useEffect(() => {
           <div style={{background:`${C.surface}dd`,borderBottom:`1px solid ${C.border}`,
             display:"flex",overflowX:"auto",padding:"0 20px",scrollbarWidth:"none"}}>
             {MONTHS.map((m,i)=>{
-              const s=calcMonth(yd.months[i]||emptyMonth());
+              const s=calcMonthForDisplay(yd.months[i]||emptyMonth(), year, i);
               const hasData=(yd.months[i]?.receitas?.length||0)+(yd.months[i]?.despesas?.length||0)>0;
               const isActive=month===i;
               const isToday=i===today.getMonth()&&year===today.getFullYear();
@@ -1331,7 +1349,7 @@ useEffect(() => {
                   </span>
                 </div>
               </div>
-              <AnnualView yearData={yd}/>
+              <AnnualView yearData={yd} year={year}/>
             </>
           )}
         </div>
@@ -1339,4 +1357,3 @@ useEffect(() => {
     </>
   );
 }
-
