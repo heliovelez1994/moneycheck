@@ -91,6 +91,17 @@ const inp = (extra={}) => ({
   outline:"none", transition:"border-color .2s", ...extra
 });
 
+// ─── Hook responsivo ──────────────────────────────────────────────────────────
+function useIsMobile() {
+  const [mobile, setMobile] = useState(() => window.innerWidth <= 640);
+  useEffect(() => {
+    const fn = () => setMobile(window.innerWidth <= 640);
+    window.addEventListener("resize", fn);
+    return () => window.removeEventListener("resize", fn);
+  }, []);
+  return mobile;
+}
+
 const glassCard = (accent="#4ade80", extra={}) => ({
   background:`linear-gradient(145deg,${accent}14 0%,${C.card} 55%)`,
   border:`1px solid ${accent}28`, borderRadius:20,
@@ -109,6 +120,25 @@ const STYLES = `
   ::-webkit-scrollbar { width:4px; height:4px; }
   ::-webkit-scrollbar-track { background:#080e1d; }
   ::-webkit-scrollbar-thumb { background:#1a2744; border-radius:99px; }
+
+  /* ── Responsivo mobile ── */
+  @media (max-width: 640px) {
+    .hero-grid   { flex-direction: column !important; }
+    .tables-grid { grid-template-columns: 1fr !important; }
+    .annual-charts-grid { grid-template-columns: 1fr !important; }
+    .annual-hero-grid   { flex-direction: column !important; }
+    .header-year { display: none !important; }
+    .col-planejado { display: none !important; }
+    .col-status    { display: none !important; }
+    .entry-editing-row { flex-direction: column !important; }
+    .add-form-row  { flex-direction: column !important; }
+    .cc-quick-add  { flex-direction: column !important; }
+    .repeat-radios { flex-direction: column !important; }
+    .month-title-block h2 { font-size: 17px !important; }
+    .content-pad   { padding: 14px 12px !important; }
+    .card-value    { font-size: 26px !important; }
+    .balance-pill  { font-size: 12px !important; padding: 6px 12px !important; }
+  }
 `;
 
 // ─── Status pill ──────────────────────────────────────────────────────────────
@@ -201,7 +231,7 @@ function BalanceHero({ planned, actual, cumPlanned, cumActual, monthLabel }) {
         </span>
       </div>
 
-      <div style={{fontSize:36,fontWeight:900,lineHeight:1,marginBottom:10,
+      <div className="card-value" style={{fontSize:36,fontWeight:900,lineHeight:1,marginBottom:10,
         color:mainVal>=0?accent:C.red,
         textShadow:`0 0 24px ${mainVal>=0?accent:C.red}55`}}>
         {fmt(mainVal)}
@@ -212,7 +242,7 @@ function BalanceHero({ planned, actual, cumPlanned, cumActual, monthLabel }) {
         <span style={{color:C.textDim,fontWeight:800}}>{fmt(subVal)}</span>
       </div>
 
-      <div style={{display:"inline-flex",alignItems:"center",gap:7,
+      <div className="balance-pill" style={{display:"inline-flex",alignItems:"center",gap:7,
         background:`${dv>=0?accent:C.red}18`,border:`1px solid ${dv>=0?accent:C.red}38`,
         borderRadius:11,padding:"8px 16px",fontSize:14,fontWeight:800,color:dv>=0?accent:C.red}}>
         <span style={{fontSize:16}}>{dv>=0?"📈":"📉"}</span>
@@ -223,7 +253,7 @@ function BalanceHero({ planned, actual, cumPlanned, cumActual, monthLabel }) {
   };
 
   return (
-    <div style={{display:"flex",gap:16,marginBottom:22,flexWrap:"wrap"}} className="fade-up">
+    <div className="fade-up hero-grid" style={{display:"flex",gap:16,marginBottom:22,flexWrap:"wrap"}}>
       <Card title={`Saldo · ${monthLabel}`} ico="📅"
         mainVal={actual} subLabel="Planejado" subVal={planned} dv={delta} accent={C.blue}/>
       <Card title={`Acumulado Jan–${monthLabel}`} ico="📊"
@@ -253,34 +283,30 @@ function EntryRow({ entry, type, onUpdate, onDelete }) {
 
   if(editing) return (
     <tr style={{background:"#091220",borderBottom:`1px solid ${C.border}`}}>
-      <td style={{padding:"10px 12px"}}>
-        <div style={{display:"flex",alignItems:"center",gap:8}}>
-          <span style={{fontSize:20}}>{catIcon(ld)}</span>
-          <input list={`ec-${type}-${entry.id}`} value={ld} onChange={e=>setLd(e.target.value)}
-            style={inp({flex:1})}/>
-          <datalist id={`ec-${type}-${entry.id}`}>
-            {CATS[isRec?"receita":"despesa"].map(c=><option key={c} value={c}/>)}
-          </datalist>
-        </div>
-      </td>
-      <td style={{padding:"10px 12px"}}>
-        <input type="number" value={lp} onChange={e=>setLp(e.target.value)}
-          style={inp({width:120})} placeholder="Planejado"/>
-      </td>
-      <td style={{padding:"10px 12px"}}>
-        <input type="number" value={la} onChange={e=>setLa(e.target.value)}
-          style={inp({width:120})} placeholder="Realizado"/>
-      </td>
-      <td style={{padding:"10px 12px"}}>
-        <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
-          <button onClick={save} className="btn-hover"
-            style={{background:C.greenDim,border:`1px solid ${C.green}55`,borderRadius:9,
-            color:C.green,padding:"7px 14px",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:800}}>
-            ✓ Salvar
-          </button>
-          <button onClick={()=>setEditing(false)} className="btn-hover"
-            style={{background:"#1e293b",border:`1px solid ${C.border}`,borderRadius:9,
-            color:C.textMid,padding:"7px 12px",cursor:"pointer",fontFamily:"inherit",fontSize:13}}>✕</button>
+      <td colSpan={4} style={{padding:"10px 12px"}}>
+        <div className="entry-editing-row" style={{display:"flex",gap:8,flexWrap:"wrap",alignItems:"center"}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,flex:"1 1 140px",minWidth:140}}>
+            <span style={{fontSize:20}}>{catIcon(ld)}</span>
+            <input list={`ec-${type}-${entry.id}`} value={ld} onChange={e=>setLd(e.target.value)}
+              style={inp({flex:1,minWidth:80})}/>
+            <datalist id={`ec-${type}-${entry.id}`}>
+              {CATS[isRec?"receita":"despesa"].map(c=><option key={c} value={c}/>)}
+            </datalist>
+          </div>
+          <input type="number" value={lp} onChange={e=>setLp(e.target.value)}
+            style={inp({width:110,flexShrink:0})} placeholder="Planejado"/>
+          <input type="number" value={la} onChange={e=>setLa(e.target.value)}
+            style={inp({width:110,flexShrink:0})} placeholder="Realizado"/>
+          <div style={{display:"flex",gap:6}}>
+            <button onClick={save} className="btn-hover"
+              style={{background:C.greenDim,border:`1px solid ${C.green}55`,borderRadius:9,
+              color:C.green,padding:"7px 14px",cursor:"pointer",fontFamily:"inherit",fontSize:13,fontWeight:800}}>
+              ✓
+            </button>
+            <button onClick={()=>setEditing(false)} className="btn-hover"
+              style={{background:"#1e293b",border:`1px solid ${C.border}`,borderRadius:9,
+              color:C.textMid,padding:"7px 12px",cursor:"pointer",fontFamily:"inherit",fontSize:13}}>✕</button>
+          </div>
         </div>
       </td>
     </tr>
@@ -304,7 +330,7 @@ function EntryRow({ entry, type, onUpdate, onDelete }) {
           </div>
         </div>
       </td>
-      <td style={{padding:"12px 12px",color:C.textDim,fontSize:14,fontWeight:800}}>{fmt(entry.planned)}</td>
+      <td className="col-planejado" style={{padding:"12px 12px",color:C.textDim,fontSize:14,fontWeight:800}}>{fmt(entry.planned)}</td>
       <td style={{padding:"12px 12px",fontSize:14}}>
         {entry.actual!=null
           ? <div style={{display:"flex",flexDirection:"column",gap:2}}>
@@ -318,10 +344,10 @@ function EntryRow({ entry, type, onUpdate, onDelete }) {
               )}
             </div>
           : <span style={{color:C.textFaint,fontStyle:"italic",fontSize:13,display:"flex",alignItems:"center",gap:4}}>
-              🔄 = planejado
+              🔄
             </span>}
       </td>
-      <td style={{padding:"12px 12px"}}>
+      <td className="col-status" style={{padding:"12px 12px"}}>
         <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
           {!isRec && entry.planned>0 && <StatusPill actual={actVal} planned={entry.planned} isReceita={false}/>}
           {isRec  && entry.planned>0 && <StatusPill actual={actVal} planned={entry.planned} isReceita={true}/>}
@@ -500,7 +526,7 @@ function CreditCardWidget({ monthData, onUpdateMonth, monthIdx, allYearData, onU
         )}
 
         {/* Quick-add */}
-        <div style={{display:"flex",gap:10,alignItems:"stretch",flexWrap:"wrap",marginBottom:14}}>
+        <div className="cc-quick-add" style={{display:"flex",gap:10,alignItems:"stretch",flexWrap:"wrap",marginBottom:14}}>
           <div style={{display:"flex",alignItems:"center",gap:8,flex:"1 1 140px",minWidth:140,
             background:C.surface,border:`1px solid #3b82f655`,borderRadius:10,padding:"0 14px"}}>
             <span style={{fontSize:15,color:C.textDim,fontWeight:700}}>R$</span>
@@ -681,7 +707,7 @@ function MonthPanel({ monthData, monthIdx, year, onUpdateMonth, cumPlanned, cumA
           </div>
 
           {/* Row 1: tipo + descrição + valor */}
-          <div style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:14}}>
+          <div className="add-form-row" style={{display:"flex",gap:12,flexWrap:"wrap",marginBottom:14}}>
             <div style={{display:"flex",flexDirection:"column",gap:5}}>
               <label style={{fontSize:12,color:C.textDim,fontWeight:700,letterSpacing:0.5}}>TIPO</label>
               <select value={addType} onChange={e=>setAddType(e.target.value)} style={inp({cursor:"pointer",minWidth:140})}>
@@ -739,7 +765,7 @@ function MonthPanel({ monthData, monthIdx, year, onUpdateMonth, cumPlanned, cumA
             {repeat && (
               <div style={{display:"flex",gap:12,flexWrap:"wrap",alignItems:"flex-end"}} className="fade-up">
                 {/* Radio: N meses ou todos */}
-                <div style={{display:"flex",gap:10}}>
+                <div className="repeat-radios" style={{display:"flex",gap:10}}>
                   {[
                     {val:"months", label:"Próximos meses", ico:"📆"},
                     {val:"forever",label:"Todos os meses restantes",ico:"♾️"},
@@ -826,7 +852,7 @@ function MonthPanel({ monthData, monthIdx, year, onUpdateMonth, cumPlanned, cumA
       )}
 
       {/* Tables */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+      <div className="tables-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
         {[
           {type:"receita",label:"Receitas",ico:"💰",items:[...monthData.receitas].sort((a,b)=>(b.actual??b.planned)-(a.actual??a.planned)),color:C.green,tp:stats.tPR,ta:stats.tAR_only},
           {type:"despesa",label:"Despesas",ico:"💸",items:[...monthData.despesas].sort((a,b)=>(b.actual??b.planned)-(a.actual??a.planned)),color:C.red,  tp:stats.tPE,ta:stats.tAE_only},
@@ -850,8 +876,8 @@ function MonthPanel({ monthData, monthIdx, year, onUpdateMonth, cumPlanned, cumA
               </colgroup>
               <thead>
                 <tr style={{background:"#05080f"}}>
-                  {["Item","Planejado","Realizado","Status"].map(h=>(
-                    <th key={h} style={{padding:"9px 12px",textAlign:"left",fontSize:11,
+                  {[["Item",""],["Planejado","col-planejado"],["Realizado",""],["Status","col-status"]].map(([h,cls])=>(
+                    <th key={h} className={cls} style={{padding:"9px 12px",textAlign:"left",fontSize:11,
                       color:C.textDim,fontWeight:700,letterSpacing:0.6,textTransform:"uppercase"}}>{h}</th>
                   ))}
                 </tr>
@@ -872,9 +898,9 @@ function MonthPanel({ monthData, monthIdx, year, onUpdateMonth, cumPlanned, cumA
               <tfoot>
                 <tr style={{background:`${color}0a`,borderTop:`1px solid ${C.border}`}}>
                   <td style={{padding:"10px 12px",fontSize:12,color:C.textMid,fontWeight:800}}>TOTAL</td>
-                  <td style={{padding:"10px 12px",color:C.textDim,fontSize:14,fontWeight:900}}>{fmt(tp)}</td>
+                  <td className="col-planejado" style={{padding:"10px 12px",color:C.textDim,fontSize:14,fontWeight:900}}>{fmt(tp)}</td>
                   <td style={{padding:"10px 12px",color,fontSize:14,fontWeight:900}}>{fmt(ta)}</td>
-                  <td/>
+                  <td className="col-status"/>
                 </tr>
               </tfoot>
             </table>
@@ -940,7 +966,7 @@ function AnnualView({ yearData, year }) {
 
   return (
     <div className="fade-up">
-      <div style={{display:"flex",gap:16,marginBottom:22,flexWrap:"wrap"}}>
+      <div className="annual-hero-grid" style={{display:"flex",gap:16,marginBottom:22,flexWrap:"wrap"}}>
         {/* Realizado primeiro, em verde */}
         <div style={{...glassCard(C.green,{flex:1,minWidth:0})}}>
           <div style={{position:"absolute",top:-50,right:-50,width:180,height:180,borderRadius:"50%",
@@ -973,7 +999,7 @@ function AnnualView({ yearData, year }) {
         </div>
       </div>
 
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:18}}>
+      <div className="annual-charts-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:18}}>
         <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:"18px 20px"}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
             <span style={{fontSize:20}}>📈</span>
@@ -1285,7 +1311,7 @@ useEffect(() => {
           </div>
           <div style={{flex:1}}/>
           {/* Year */}
-          <div style={{display:"flex",alignItems:"center",gap:8,background:C.card,
+          <div className="header-year" style={{display:"flex",alignItems:"center",gap:8,background:C.card,
             border:`1px solid ${C.border}`,borderRadius:12,padding:"5px 12px"}}>
             <button onClick={()=>setYear(y=>y-1)} className="btn-hover"
               style={{background:"none",border:"none",color:C.textMid,cursor:"pointer",fontSize:20,padding:"0 2px"}}>‹</button>
@@ -1300,7 +1326,7 @@ useEffect(() => {
                 background:view===v?`${C.green}20`:"transparent",
                 border:view===v?`1px solid ${C.green}44`:"1px solid transparent",
                 color:view===v?C.green:C.textDim,
-                borderRadius:9,padding:"7px 18px",cursor:"pointer",
+                borderRadius:9,padding:"7px 14px",cursor:"pointer",
                 fontFamily:"inherit",fontSize:12,fontWeight:800,letterSpacing:0.3,transition:"all .2s"
               }}>{l}</button>
             ))}
@@ -1344,10 +1370,10 @@ useEffect(() => {
         )}
 
         {/* ── Content ── */}
-        <div style={{padding:"24px 20px",maxWidth:1100,margin:"0 auto"}}>
+        <div className="content-pad" style={{padding:"24px 20px",maxWidth:1100,margin:"0 auto"}}>
           {view==="month" ? (
             <>
-              <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:22}}>
+              <div className="month-title-block" style={{display:"flex",alignItems:"center",gap:14,marginBottom:22}}>
                 <div style={{width:44,height:44,borderRadius:13,
                   background:`linear-gradient(135deg,${C.green}30,${C.blue}20)`,
                   border:`1px solid ${C.green}30`,
@@ -1372,7 +1398,7 @@ useEffect(() => {
             </>
           ) : (
             <>
-              <div style={{display:"flex",alignItems:"center",gap:14,marginBottom:22}}>
+              <div className="month-title-block" style={{display:"flex",alignItems:"center",gap:14,marginBottom:22}}>
                 <div style={{width:44,height:44,borderRadius:13,
                   background:`linear-gradient(135deg,${C.purple}30,${C.blue}20)`,
                   border:`1px solid ${C.purple}30`,
