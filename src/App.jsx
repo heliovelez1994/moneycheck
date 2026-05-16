@@ -153,7 +153,9 @@ function BalanceHero({ planned, actual, cumPlanned, cumActual, monthLabel }) {
   const delta    = actual - planned;
   const cumDelta = cumActual - cumPlanned;
 
-  const Card = ({ title, ico, mainVal, subLabel, subVal, dv, accent }) => (
+  const Card = ({ title, ico, mainVal, subLabel, subVal, dv, accent }) => {
+    const superouPlano = mainVal >= subVal;
+    return (
     <div style={glassCard(accent,{flex:1,minWidth:0})}>
       <div style={{position:"absolute",top:-50,right:-50,width:160,height:160,borderRadius:"50%",
         background:`radial-gradient(circle,${accent}1a,transparent 70%)`,pointerEvents:"none"}}/>
@@ -165,6 +167,12 @@ function BalanceHero({ planned, actual, cumPlanned, cumActual, monthLabel }) {
           display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,
           boxShadow:`0 2px 8px ${accent}33`}}>{ico}</div>
         <span style={{fontSize:12,color:accent,fontWeight:800,letterSpacing:1,textTransform:"uppercase"}}>{title}</span>
+        {/* Ícone seta: verde para cima se realizado >= planejado, vermelho para baixo se menor */}
+        <span style={{marginLeft:"auto",fontSize:20,lineHeight:1,
+          color:superouPlano?C.green:C.red,
+          filter:superouPlano?"drop-shadow(0 0 6px #4ade8088)":"drop-shadow(0 0 6px #f8717188)"}}>
+          {superouPlano?"↑":"↓"}
+        </span>
       </div>
 
       <div style={{fontSize:36,fontWeight:900,lineHeight:1,marginBottom:10,
@@ -186,6 +194,7 @@ function BalanceHero({ planned, actual, cumPlanned, cumActual, monthLabel }) {
       </div>
     </div>
   );
+  };
 
   return (
     <div style={{display:"flex",gap:16,marginBottom:22,flexWrap:"wrap"}} className="fade-up">
@@ -205,7 +214,9 @@ function EntryRow({ entry, type, onUpdate, onDelete }) {
   const [la,setLa] = useState(entry.actual!=null?entry.actual:"");
 
   const save = () => {
-    onUpdate(entry.id,{desc:ld,planned:parseFloat(lp)||0,actual:la!==""?parseFloat(la):null});
+    const plannedVal = parseFloat(lp)||0;
+    const actualVal  = la!==""?parseFloat(la):plannedVal;
+    onUpdate(entry.id,{desc:ld,planned:plannedVal,actual:actualVal});
     setEditing(false);
   };
 
@@ -396,10 +407,18 @@ function CreditCardWidget({ monthData, onUpdateMonth }) {
               </div>
             )}
           </div>
-          {/* Total charged */}
+          {/* Resta */}
           <div style={{textAlign:"right"}}>
-            <div style={{fontSize:11,color:C.textDim,fontWeight:600,marginBottom:2}}>TOTAL GASTO</div>
-            <div style={{fontSize:22,fontWeight:900,color:C.red}}>{fmt(totalCharges)}</div>
+            <div style={{fontSize:11,color:C.textDim,fontWeight:600,marginBottom:2}}>RESTA</div>
+            {(() => {
+              const resta = planned - totalCharges;
+              const restaColor = resta >= 0 ? C.green : C.red;
+              return (
+                <div style={{fontSize:22,fontWeight:900,color:restaColor}}>
+                  {resta >= 0 ? "" : "-"}{fmt(Math.abs(resta))}
+                </div>
+              );
+            })()}
           </div>
           {/* Toggle collapse */}
           <button onClick={()=>setCollapsed(c=>!c)} className="btn-hover"
@@ -550,10 +569,12 @@ function MonthPanel({ monthData, monthIdx, year, onUpdateMonth, cumPlanned, cumA
     onUpdateMonth({...monthData,[k]:monthData[k].filter(e=>e.id!==id)});
   };
 
-  const barData = monthData.despesas.map(d=>({
-    name:d.desc.length>10?d.desc.slice(0,9)+"…":d.desc,
-    Planejado:d.planned, Realizado:d.actual!=null?d.actual:d.planned,
-  }));
+  const barData = [...monthData.despesas]
+    .sort((a,b)=>(b.actual!=null?b.actual:b.planned)-(a.actual!=null?a.actual:a.planned))
+    .map(d=>({
+      name:d.desc.length>10?d.desc.slice(0,9)+"…":d.desc,
+      Planejado:d.planned, Realizado:d.actual!=null?d.actual:d.planned,
+    }));
 
   const remainingMonths = 11 - monthIdx;
 
@@ -600,72 +621,17 @@ function MonthPanel({ monthData, monthIdx, year, onUpdateMonth, cumPlanned, cumA
         </div>
       </div>
 
-      {/* Tables */}
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
-        {[
-          {type:"receita",label:"Receitas",ico:"💰",items:monthData.receitas,color:C.green,tp:stats.tPR,ta:stats.tAR},
-          {type:"despesa",label:"Despesas",ico:"💸",items:monthData.despesas,color:C.red,  tp:stats.tPE,ta:stats.tAE},
-        ].map(({type,label,ico,items,color,tp,ta})=>(
-          <div key={type} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,overflow:"hidden",minWidth:0}}>
-            <div style={{background:`${color}0d`,padding:"14px 16px",borderBottom:`1px solid ${C.border}`,
-              display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-              <div style={{display:"flex",alignItems:"center",gap:8}}>
-                <span style={{fontSize:20}}>{ico}</span>
-                <span style={{color,fontSize:13,fontWeight:900,letterSpacing:0.5}}>{label.toUpperCase()}</span>
-              </div>
-              <div style={{textAlign:"right"}}>
-                <div style={{color,fontSize:16,fontWeight:900}}>{fmt(ta)}</div>
-                <div style={{fontSize:12,color:C.textDim}}>plan. <span style={{color:C.textDim,fontWeight:700}}>{fmt(tp)}</span></div>
-              </div>
-            </div>
-            <table style={{width:"100%",borderCollapse:"collapse",tableLayout:"fixed"}}>
-              <colgroup>
-                <col style={{width:"36%"}}/><col style={{width:"20%"}}/>
-                <col style={{width:"25%"}}/><col style={{width:"19%"}}/>
-              </colgroup>
-              <thead>
-                <tr style={{background:"#05080f"}}>
-                  {["Item","Planejado","Realizado","Status"].map(h=>(
-                    <th key={h} style={{padding:"9px 12px",textAlign:"left",fontSize:11,
-                      color:C.textDim,fontWeight:700,letterSpacing:0.6,textTransform:"uppercase"}}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {items.length===0 && (
-                  <tr><td colSpan={4} style={{padding:"28px 12px",textAlign:"center"}}>
-                    <div style={{fontSize:32,marginBottom:8}}>📭</div>
-                    <div style={{color:C.textFaint,fontSize:13,fontStyle:"italic"}}>Nenhum lançamento</div>
-                  </td></tr>
-                )}
-                {items.map(entry=>(
-                  <EntryRow key={entry.id} entry={entry} type={type}
-                    onUpdate={(id,ch)=>updEntry(type,id,ch)}
-                    onDelete={id=>delEntry(type,id)}/>
-                ))}
-              </tbody>
-              <tfoot>
-                <tr style={{background:`${color}0a`,borderTop:`1px solid ${C.border}`}}>
-                  <td style={{padding:"10px 12px",fontSize:12,color:C.textMid,fontWeight:800}}>TOTAL</td>
-                  <td style={{padding:"10px 12px",color:C.textDim,fontSize:14,fontWeight:900}}>{fmt(tp)}</td>
-                  <td style={{padding:"10px 12px",color,fontSize:14,fontWeight:900}}>{fmt(ta)}</td>
-                  <td/>
-                </tr>
-              </tfoot>
-            </table>
-          </div>
-        ))}
-      </div>
-
-      {/* Add entry */}
+      {/* Add entry - acima das tabelas com destaque */}
       {!showAdd ? (
         <button onClick={()=>setShowAdd(true)} className="btn-hover"
-          style={{width:"100%",padding:"16px",background:C.card,
-          border:`2px dashed ${C.border}`,borderRadius:14,
-          color:C.textMid,fontSize:15,fontWeight:700,cursor:"pointer",
+          style={{width:"100%",padding:"18px",
+          background:`linear-gradient(135deg,${C.green}18,${C.blue}10)`,
+          border:`2px solid ${C.green}55`,borderRadius:14,
+          color:C.green,fontSize:16,fontWeight:900,cursor:"pointer",
           fontFamily:"inherit",display:"flex",alignItems:"center",justifyContent:"center",gap:10,
-          marginBottom:14,transition:"all .2s"}}>
-          <span style={{fontSize:22,lineHeight:1}}>＋</span> Adicionar Lançamento
+          marginBottom:14,transition:"all .2s",
+          boxShadow:`0 0 18px ${C.green}22`,letterSpacing:0.5}}>
+          <span style={{fontSize:24,lineHeight:1}}>＋</span> Adicionar Lançamento
         </button>
       ) : (
         <div style={{background:C.card,border:`1px solid ${C.blue}44`,
@@ -821,6 +787,63 @@ function MonthPanel({ monthData, monthIdx, year, onUpdateMonth, cumPlanned, cumA
           </div>
         </div>
       )}
+
+      {/* Tables */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+        {[
+          {type:"receita",label:"Receitas",ico:"💰",items:[...monthData.receitas].sort((a,b)=>(b.actual??b.planned)-(a.actual??a.planned)),color:C.green,tp:stats.tPR,ta:stats.tAR},
+          {type:"despesa",label:"Despesas",ico:"💸",items:[...monthData.despesas].sort((a,b)=>(b.actual??b.planned)-(a.actual??a.planned)),color:C.red,  tp:stats.tPE,ta:stats.tAE},
+        ].map(({type,label,ico,items,color,tp,ta})=>(
+          <div key={type} style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,overflow:"hidden",minWidth:0}}>
+            <div style={{background:`${color}0d`,padding:"14px 16px",borderBottom:`1px solid ${C.border}`,
+              display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+              <div style={{display:"flex",alignItems:"center",gap:8}}>
+                <span style={{fontSize:20}}>{ico}</span>
+                <span style={{color,fontSize:13,fontWeight:900,letterSpacing:0.5}}>{label.toUpperCase()}</span>
+              </div>
+              <div style={{textAlign:"right"}}>
+                <div style={{color,fontSize:16,fontWeight:900}}>{fmt(ta)}</div>
+                <div style={{fontSize:12,color:C.textDim}}>plan. <span style={{color:C.textDim,fontWeight:700}}>{fmt(tp)}</span></div>
+              </div>
+            </div>
+            <table style={{width:"100%",borderCollapse:"collapse",tableLayout:"fixed"}}>
+              <colgroup>
+                <col style={{width:"36%"}}/><col style={{width:"20%"}}/>
+                <col style={{width:"25%"}}/><col style={{width:"19%"}}/>
+              </colgroup>
+              <thead>
+                <tr style={{background:"#05080f"}}>
+                  {["Item","Planejado","Realizado","Status"].map(h=>(
+                    <th key={h} style={{padding:"9px 12px",textAlign:"left",fontSize:11,
+                      color:C.textDim,fontWeight:700,letterSpacing:0.6,textTransform:"uppercase"}}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {items.length===0 && (
+                  <tr><td colSpan={4} style={{padding:"28px 12px",textAlign:"center"}}>
+                    <div style={{fontSize:32,marginBottom:8}}>📭</div>
+                    <div style={{color:C.textFaint,fontSize:13,fontStyle:"italic"}}>Nenhum lançamento</div>
+                  </td></tr>
+                )}
+                {items.map(entry=>(
+                  <EntryRow key={entry.id} entry={entry} type={type}
+                    onUpdate={(id,ch)=>updEntry(type,id,ch)}
+                    onDelete={id=>delEntry(type,id)}/>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr style={{background:`${color}0a`,borderTop:`1px solid ${C.border}`}}>
+                  <td style={{padding:"10px 12px",fontSize:12,color:C.textMid,fontWeight:800}}>TOTAL</td>
+                  <td style={{padding:"10px 12px",color:C.textDim,fontSize:14,fontWeight:900}}>{fmt(tp)}</td>
+                  <td style={{padding:"10px 12px",color,fontSize:14,fontWeight:900}}>{fmt(ta)}</td>
+                  <td/>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        ))}
+      </div>
 
       {/* Chart */}
       {monthData.despesas.length>0 && (
@@ -1316,3 +1339,4 @@ useEffect(() => {
     </>
   );
 }
+
