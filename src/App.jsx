@@ -132,12 +132,21 @@ const STYLES = `
     .col-status    { display: none !important; }
     .entry-editing-row { flex-direction: column !important; }
     .add-form-row  { flex-direction: column !important; }
-    .cc-quick-add  { flex-direction: column !important; }
+    .cc-quick-add  { flex-direction: row !important; flex-wrap: wrap !important; gap: 6px !important; }
+    .cc-field-value { flex: 0 0 auto !important; width: 110px !important; min-width: 0 !important; }
+    .cc-field-cat   { flex: 1 1 0 !important; min-width: 0 !important; }
+    .cc-add-btn     { flex: 0 0 auto !important; width: auto !important; padding: 0 12px !important; font-size: 12px !important; }
     .repeat-radios { flex-direction: column !important; }
     .month-title-block h2 { font-size: 17px !important; }
     .content-pad   { padding: 14px 12px !important; }
     .card-value    { font-size: 26px !important; }
     .balance-pill  { font-size: 12px !important; padding: 6px 12px !important; }
+    .mobile-plan   { display: flex !important; }
+    .mobile-btns   { display: flex !important; }
+  }
+  @media (min-width: 641px) {
+    .mobile-plan { display: none !important; }
+    .mobile-btns { display: none !important; }
   }
 `;
 
@@ -266,15 +275,12 @@ function BalanceHero({ planned, actual, cumPlanned, cumActual, monthLabel }) {
 function EntryRow({ entry, type, onUpdate, onDelete }) {
   const [editing,setEditing] = useState(false);
   const [ld,setLd] = useState(entry.desc);
-  const [lp,setLp] = useState(entry.planned!=null?String(entry.planned):"");
-  const [la,setLa] = useState(entry.actual!=null?String(entry.actual):"");
-
-  useEffect(()=>{ setLp(entry.planned!=null?String(entry.planned):""); },[entry.planned]);
-  useEffect(()=>{ setLa(entry.actual!=null?String(entry.actual):""); },[entry.actual]);
+  const [lp,setLp] = useState(entry.planned||"");
+  const [la,setLa] = useState(entry.actual!=null?entry.actual:"");
 
   const save = () => {
-    const plannedVal = lp!==""?parseFloat(lp):0;
-    const actualVal  = la!==""?parseFloat(la):null;
+    const plannedVal = parseFloat(lp)||0;
+    const actualVal  = la!==""?parseFloat(la):plannedVal;
     onUpdate(entry.id,{desc:ld,planned:plannedVal,actual:actualVal});
     setEditing(false);
   };
@@ -297,9 +303,9 @@ function EntryRow({ entry, type, onUpdate, onDelete }) {
             </datalist>
           </div>
           <input type="number" value={lp} onChange={e=>setLp(e.target.value)}
-            style={inp({width:110,flexShrink:0})} placeholder="Planejado"/>
+            style={inp({flex:"1 1 90px",minWidth:80})} placeholder="Planejado"/>
           <input type="number" value={la} onChange={e=>setLa(e.target.value)}
-            style={inp({width:110,flexShrink:0})} placeholder="Realizado"/>
+            style={inp({flex:"1 1 90px",minWidth:80})} placeholder="Realizado"/>
           <div style={{display:"flex",gap:6}}>
             <button onClick={save} className="btn-hover"
               style={{background:C.greenDim,border:`1px solid ${C.green}55`,borderRadius:9,
@@ -334,21 +340,39 @@ function EntryRow({ entry, type, onUpdate, onDelete }) {
         </div>
       </td>
       <td className="col-planejado" style={{padding:"12px 12px",color:C.textDim,fontSize:14,fontWeight:800}}>{fmt(entry.planned)}</td>
-      <td style={{padding:"12px 12px",fontSize:14}}>
-        {entry.actual!=null
-          ? <div style={{display:"flex",flexDirection:"column",gap:2}}>
-              <span style={{color:isRec?C.green:C.red,fontWeight:800}}>{fmt(entry.actual)}</span>
-              {diff!==0 && (
-                <span style={{fontSize:11,fontWeight:700,
-                  color:isRec?(diff>0?C.green:C.red):(diff>0?C.red:C.green),
-                  display:"flex",alignItems:"center",gap:3}}>
-                  {isRec?(diff>0?"▲":"▼"):(diff>0?"▲":"▼")} {fmt(Math.abs(diff))}
-                </span>
-              )}
-            </div>
-          : <span style={{color:C.textFaint,fontStyle:"italic",fontSize:13,display:"flex",alignItems:"center",gap:4}}>
-              🔄
-            </span>}
+      <td style={{padding:"10px 12px",fontSize:14}}>
+        <div style={{display:"flex",flexDirection:"column",gap:4}}>
+          {/* Valor realizado (ou pendente) */}
+          {entry.actual!=null
+            ? <div style={{display:"flex",flexDirection:"column",gap:2}}>
+                <span style={{color:isRec?C.green:C.red,fontWeight:800}}>{fmt(entry.actual)}</span>
+                {diff!==0 && (
+                  <span style={{fontSize:11,fontWeight:700,
+                    color:isRec?(diff>0?C.green:C.red):(diff>0?C.red:C.green),
+                    display:"flex",alignItems:"center",gap:3}}>
+                    {isRec?(diff>0?"▲":"▼"):(diff>0?"▲":"▼")} {fmt(Math.abs(diff))}
+                  </span>
+                )}
+              </div>
+            : <span style={{color:C.textFaint,fontStyle:"italic",fontSize:13,display:"flex",alignItems:"center",gap:4}}>
+                🔄
+              </span>}
+          {/* Planejado — visível só no mobile */}
+          {entry.planned>0 && (
+            <span className="mobile-plan" style={{display:"none",fontSize:11,color:C.textDim,fontWeight:600,alignItems:"center",gap:3}}>
+              plan. {fmt(entry.planned)}
+            </span>
+          )}
+          {/* Botões editar/excluir — visíveis só no mobile */}
+          <div className="mobile-btns" style={{display:"none",gap:5,alignItems:"center",marginTop:2}}>
+            <button onClick={()=>setEditing(true)} className="btn-hover"
+              style={{background:C.blueDim,border:`1px solid ${C.blue}44`,borderRadius:7,
+              color:C.blue,padding:"4px 10px",cursor:"pointer",fontSize:12,fontWeight:700}}>✎</button>
+            <button onClick={()=>onDelete(entry.id)} className="btn-hover"
+              style={{background:C.redDim,border:`1px solid ${C.red}44`,borderRadius:7,
+              color:C.red,padding:"4px 10px",cursor:"pointer",fontSize:12,fontWeight:700}}>✕</button>
+          </div>
+        </div>
       </td>
       <td className="col-status" style={{padding:"12px 12px"}}>
         <div style={{display:"flex",gap:6,alignItems:"center",flexWrap:"wrap"}}>
@@ -530,32 +554,33 @@ function CreditCardWidget({ monthData, onUpdateMonth, monthIdx, allYearData, onU
 
         {/* Quick-add */}
         <div className="cc-quick-add" style={{display:"flex",gap:8,alignItems:"stretch",flexWrap:"wrap",marginBottom:12}}>
-          <div style={{display:"flex",alignItems:"center",gap:6,flex:"0 1 120px",minWidth:100,
+          <div className="cc-field-value" style={{display:"flex",alignItems:"center",gap:6,flex:"0 0 120px",
             background:C.surface,border:`1px solid #3b82f655`,borderRadius:9,padding:"0 10px"}}>
-            <span style={{fontSize:13,color:C.textDim,fontWeight:700}}>R$</span>
+            <span style={{fontSize:13,color:C.textDim,fontWeight:700,flexShrink:0}}>R$</span>
             <input type="number" value={newCharge} onChange={e=>setNewCharge(e.target.value)}
               placeholder="Valor"
               style={{background:"transparent",border:"none",outline:"none",color:C.text,
-                fontSize:13,fontFamily:"inherit",padding:"9px 0",flex:1,fontWeight:600}}
+                fontSize:13,fontFamily:"inherit",padding:"9px 0",flex:1,fontWeight:600,minWidth:0}}
               onKeyDown={e=>e.key==="Enter"&&addCharge()}/>
           </div>
-          <div style={{display:"flex",alignItems:"center",gap:6,flex:"1 1 130px",minWidth:120,
+          <div className="cc-field-cat" style={{display:"flex",alignItems:"center",gap:6,flex:"1 1 120px",minWidth:0,
             background:C.surface,border:`1px solid #3b82f655`,borderRadius:9,padding:"0 10px"}}>
-            <span style={{fontSize:13,color:C.textDim}}>🏷️</span>
+            <span style={{fontSize:13,color:C.textDim,flexShrink:0}}>🏷️</span>
             <input list="cc-cats" value={newCat} onChange={e=>setNewCat(e.target.value)}
               placeholder="Categoria"
               style={{background:"transparent",border:"none",outline:"none",color:C.text,
-                fontSize:13,fontFamily:"inherit",padding:"9px 0",flex:1}}
+                fontSize:13,fontFamily:"inherit",padding:"9px 0",flex:1,minWidth:0}}
               onKeyDown={e=>e.key==="Enter"&&addCharge()}/>
             <datalist id="cc-cats">
               {usedCats.map(c=><option key={c} value={c}/>)}
             </datalist>
           </div>
-          <button onClick={addCharge} className="btn-hover"
+          <button onClick={addCharge} className="btn-hover cc-add-btn"
             style={{background:"#3b82f622",border:"1px solid #3b82f655",borderRadius:9,
             color:C.blue,padding:"0 14px",cursor:"pointer",fontFamily:"inherit",
-            fontSize:13,fontWeight:800,display:"flex",alignItems:"center",gap:5,whiteSpace:"nowrap"}}>
-            <span style={{fontSize:16}}>＋</span> Add
+            fontSize:13,fontWeight:800,display:"flex",alignItems:"center",gap:5,
+            whiteSpace:"nowrap",flexShrink:0}}>
+            <span style={{fontSize:15}}>＋</span> Add
           </button>
         </div>
 
@@ -1099,7 +1124,19 @@ function AnnualView({ yearData, year }) {
                 );
               })}
             </tbody>
-
+            <tfoot>
+              <tr style={{background:`${C.green}08`,borderTop:`2px solid ${C.border}`}}>
+                <td style={{padding:"13px 14px",fontWeight:900,color:C.text,fontSize:14}}>🏆 TOTAL ANUAL</td>
+                <td style={{padding:"13px 14px",fontWeight:900,fontSize:14,color:C.green}}>{fmt(annAct)}</td>
+                <td style={{padding:"13px 14px",fontWeight:900,fontSize:14,color:C.green}}>{fmt(annAct)}</td>
+                <td style={{padding:"13px 14px",fontWeight:900,fontSize:14,color:annDev>=0?C.green:C.red}}>
+                  <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
+                    <span>{annDev>=0?"📈":"📉"}</span>{fmt(Math.abs(annDev))}
+                  </span>
+                </td>
+                <td style={{padding:"13px 14px"}}><StatusPill actual={totalAE} planned={totalPE} isReceita={false}/></td>
+              </tr>
+            </tfoot>
           </table>
         </div>
       </div>
@@ -1152,7 +1189,49 @@ function AnnualView({ yearData, year }) {
               );
             })}
           </div>
-
+          {/* Mini tabela resumo */}
+          <div style={{borderTop:`1px solid ${C.border}`,overflowX:"auto"}}>
+            <table style={{width:"100%",borderCollapse:"collapse",minWidth:380}}>
+              <thead>
+                <tr style={{background:"#05080f"}}>
+                  {["Categoria","Gasto no Ano","%"].map(h=>(
+                    <th key={h} style={{padding:"9px 16px",textAlign:"left",fontSize:11,
+                      color:C.textDim,fontWeight:700,letterSpacing:0.6}}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {ccCats.map(({cat,val,pct},idx)=>(
+                  <tr key={cat} className="row-hover" style={{borderBottom:`1px solid ${C.border}1a`}}>
+                    <td style={{padding:"10px 16px"}}>
+                      <div style={{display:"flex",alignItems:"center",gap:8}}>
+                        <div style={{width:8,height:8,borderRadius:99,
+                          background:catColors[idx%catColors.length],flexShrink:0}}/>
+                        <span style={{fontSize:14,color:C.textMid,fontWeight:600}}>{cat}</span>
+                      </div>
+                    </td>
+                    <td style={{padding:"10px 16px",fontSize:14,fontWeight:800,color:C.red}}>{fmt(val)}</td>
+                    <td style={{padding:"10px 16px"}}>
+                      <span style={{fontSize:13,fontWeight:700,
+                        color:catColors[idx%catColors.length],
+                        background:`${catColors[idx%catColors.length]}18`,
+                        border:`1px solid ${catColors[idx%catColors.length]}33`,
+                        borderRadius:99,padding:"3px 11px"}}>
+                        {pct.toFixed(0)}%
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr style={{background:`${C.red}08`,borderTop:`2px solid ${C.border}`}}>
+                  <td style={{padding:"11px 16px",fontWeight:900,color:C.text,fontSize:14}}>TOTAL</td>
+                  <td style={{padding:"11px 16px",fontWeight:900,fontSize:14,color:C.red}}>{fmt(ccTotal)}</td>
+                  <td style={{padding:"11px 16px",fontWeight:900,fontSize:14,color:C.textDim}}>100%</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
         </div>
       )}
     </div>
