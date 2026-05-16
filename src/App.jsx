@@ -73,8 +73,6 @@ const glassCard = (accent="#4ade80", extra={}) => ({
   padding:"22px 24px", position:"relative", overflow:"hidden", ...extra
 });
 
-// ─── Global styles ────────────────────────────────────────────────────────────
-
 // ─── Status pill ──────────────────────────────────────────────────────────────
 function StatusPill({ actual, planned, isReceita=false }) {
   if (!planned) return null;
@@ -1178,7 +1176,6 @@ useEffect(() => {
 
   return (
     <>
-      <style>{STYLES}</style>
       <div style={{minHeight:"100vh",background:C.bg,
         fontFamily:"'DM Mono','IBM Plex Mono','Courier New',monospace",
         color:C.text,boxSizing:"border-box"}}>
