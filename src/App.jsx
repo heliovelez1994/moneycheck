@@ -130,6 +130,11 @@ const STYLES = `
     .header-year { display: none !important; }
     .col-planejado { display: none !important; }
     .col-status    { display: none !important; }
+    .entry-table   { table-layout: auto !important; }
+    .entry-col-item    { width: 60% !important; }
+    .entry-col-plan    { display: none !important; }
+    .entry-col-real    { width: 40% !important; }
+    .entry-col-status  { display: none !important; }
     .entry-editing-row { flex-direction: row !important; flex-wrap: wrap !important; align-items: center !important; gap: 6px !important; }
     .entry-editing-row > * { flex: 1 1 80px !important; min-width: 80px !important; max-width: 100% !important; }
     .entry-editing-row .edit-desc { flex: 1 1 100% !important; }
@@ -907,10 +912,10 @@ function MonthPanel({ monthData, monthIdx, year, onUpdateMonth, cumPlanned, cumA
                 <div style={{fontSize:12,color:C.textDim}}>plan. <span style={{color:C.textDim,fontWeight:700}}>{fmt(tp)}</span></div>
               </div>
             </div>
-            <table style={{width:"100%",borderCollapse:"collapse",tableLayout:"fixed"}}>
+            <table className="entry-table" style={{width:"100%",borderCollapse:"collapse",tableLayout:"fixed"}}>
               <colgroup>
-                <col style={{width:"36%"}}/><col style={{width:"20%"}}/>
-                <col style={{width:"25%"}}/><col style={{width:"19%"}}/>
+                <col className="entry-col-item" style={{width:"36%"}}/><col className="entry-col-plan" style={{width:"20%"}}/>
+                <col className="entry-col-real" style={{width:"25%"}}/><col className="entry-col-status" style={{width:"19%"}}/>
               </colgroup>
               <thead>
                 <tr style={{background:"#05080f"}}>
@@ -1038,7 +1043,7 @@ function AnnualView({ yearData, year }) {
         </div>
       </div>
 
-      <div className="annual-charts-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:18}}>
+      <div style={{marginBottom:18}}>
         <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:"18px 20px"}}>
           <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
             <span style={{fontSize:20}}>📈</span>
@@ -1056,30 +1061,13 @@ function AnnualView({ yearData, year }) {
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#0a1628"/>
               <XAxis dataKey="name" tick={isMobile?false:{fill:C.textDim,fontSize:12}} axisLine={false} tickLine={false}/>
+              <YAxis tick={{fill:C.textDim,fontSize:11}} tickFormatter={fmtK} axisLine={false} tickLine={false}/>
+              <ReferenceLine y={0} stroke={C.border} strokeDasharray="3 3"/>
               <Tooltip formatter={v=>fmt(v)} contentStyle={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,fontSize:13}}/>
               <Legend iconType="circle" wrapperStyle={{fontSize:12,color:C.textMid}}/>
               <Area type="monotone" dataKey="Acum. Plan." stroke={C.blue} fill="url(#gP)" strokeWidth={2} strokeDasharray="5 5" dot={false}/>
               <Area type="monotone" dataKey="Acum. Real." stroke={C.purple} fill="url(#gA)" strokeWidth={2} dot={{r:3,fill:C.purple}}/>
             </AreaChart>
-          </ResponsiveContainer>
-        </div>
-
-        <div style={{background:C.card,border:`1px solid ${C.border}`,borderRadius:16,padding:"18px 20px"}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:14}}>
-            <span style={{fontSize:20}}>📊</span>
-            <span style={{fontSize:12,color:C.textMid,fontWeight:800,letterSpacing:0.6,textTransform:"uppercase"}}>Saldo Mensal</span>
-          </div>
-          <ResponsiveContainer width="100%" height={200}>
-            <BarChart data={barData} margin={{top:4,right:4,left:0,bottom:0}}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#0a1628"/>
-              <XAxis dataKey="name" tick={isMobile?false:{fill:C.textDim,fontSize:12}} axisLine={false} tickLine={false}/>
-              <YAxis tick={{fill:C.textDim,fontSize:11}} tickFormatter={fmtK} axisLine={false} tickLine={false}/>
-              <ReferenceLine y={0} stroke={C.border}/>
-              <Tooltip formatter={(v,n)=>[fmt(v),n]} contentStyle={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,fontSize:13}}/>
-              <Legend iconType="circle" wrapperStyle={{fontSize:12,color:C.textMid}}/>
-              <Bar dataKey="Planejado" fill="#1e3a5f" radius={[5,5,0,0]}/>
-              <Bar dataKey="Realizado" fill={C.green} radius={[5,5,0,0]}/>
-            </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
@@ -1394,3 +1382,4 @@ useEffect(() => {
     </>
   );
 }
+
