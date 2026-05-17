@@ -959,6 +959,8 @@ function MonthPanel({ monthData, monthIdx, year, onUpdateMonth, cumPlanned, cumA
             <BarChart data={barData} margin={{top:4,right:4,left:0,bottom:0}}>
               <CartesianGrid strokeDasharray="3 3" stroke="#0a1628"/>
               <XAxis dataKey="name" tick={isMobile?false:{fill:C.textDim,fontSize:12}} axisLine={false} tickLine={false}/>
+              <YAxis tick={{fill:C.textDim,fontSize:11}} tickFormatter={fmtK} axisLine={false} tickLine={false}/>
+              <Tooltip formatter={v=>fmt(v)} cursor={{fill:"#1e3a5f22"}}
                 contentStyle={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,fontSize:13}}/>
               <Bar dataKey="Planejado" fill="#1e3a5f" radius={[5,5,0,0]}/>
               <Bar dataKey="Realizado" fill={C.red} radius={[5,5,0,0]}/>
