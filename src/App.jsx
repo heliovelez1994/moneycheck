@@ -146,6 +146,7 @@ const STYLES = `
     .balance-pill  { font-size: 12px !important; padding: 6px 12px !important; }
     .mobile-plan   { display: flex !important; }
     .mobile-btns   { display: flex !important; }
+    .entry-val-col { padding-left: 18px !important; }
   }
   @media (min-width: 641px) {
     .mobile-plan { display: none !important; }
@@ -221,7 +222,7 @@ function BalanceHero({ planned, actual, cumPlanned, cumActual, monthLabel }) {
   const delta    = actual - planned;
   const cumDelta = cumActual - cumPlanned;
 
-  const Card = ({ title, ico, mainVal, subLabel, subVal, dv, accent }) => {
+  const Card = ({ title, ico, mainVal, subLabel, subVal, dv, accent, hideArrow }) => {
     const superouPlano = mainVal >= subVal;
     return (
     <div style={glassCard(accent,{flex:1,minWidth:0})}>
@@ -235,12 +236,14 @@ function BalanceHero({ planned, actual, cumPlanned, cumActual, monthLabel }) {
           display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,
           boxShadow:`0 2px 8px ${accent}33`}}>{ico}</div>
         <span style={{fontSize:12,color:accent,fontWeight:800,letterSpacing:1,textTransform:"uppercase"}}>{title}</span>
-        {/* Ícone seta: verde para cima se realizado >= planejado, vermelho para baixo se menor */}
-        <span style={{marginLeft:"auto",fontSize:20,lineHeight:1,
-          color:superouPlano?C.green:C.red,
-          filter:superouPlano?"drop-shadow(0 0 6px #4ade8088)":"drop-shadow(0 0 6px #f8717188)"}}>
-          {superouPlano?"↑":"↓"}
-        </span>
+        {/* Ícone seta: só exibe se não for hideArrow */}
+        {!hideArrow && (
+          <span style={{marginLeft:"auto",fontSize:20,lineHeight:1,
+            color:superouPlano?C.green:C.red,
+            filter:superouPlano?"drop-shadow(0 0 6px #4ade8088)":"drop-shadow(0 0 6px #f8717188)"}}>
+            {superouPlano?"↑":"↓"}
+          </span>
+        )}
       </div>
 
       <div className="card-value" style={{fontSize:36,fontWeight:900,lineHeight:1,marginBottom:10,
@@ -267,9 +270,9 @@ function BalanceHero({ planned, actual, cumPlanned, cumActual, monthLabel }) {
   return (
     <div className="fade-up hero-grid" style={{display:"flex",gap:16,marginBottom:22,flexWrap:"wrap"}}>
       <Card title={`Saldo · ${monthLabel}`} ico="📅"
-        mainVal={actual} subLabel="Planejado" subVal={planned} dv={delta} accent={C.blue}/>
+        mainVal={actual} subLabel="Planejado" subVal={planned} dv={delta} accent={C.blue} hideArrow/>
       <Card title={`Acumulado Jan–${monthLabel}`} ico="📊"
-        mainVal={cumActual} subLabel="Planejado acum." subVal={cumPlanned} dv={cumDelta} accent={C.purple}/>
+        mainVal={cumActual} subLabel="Planejado acum." subVal={cumPlanned} dv={cumDelta} accent={C.purple} hideArrow/>
     </div>
   );
 }
@@ -347,7 +350,7 @@ function EntryRow({ entry, type, onUpdate, onDelete }) {
         </div>
       </td>
       <td className="col-planejado" style={{padding:"12px 12px",color:C.textDim,fontSize:14,fontWeight:800}}>{fmt(entry.planned)}</td>
-      <td style={{padding:"10px 12px",fontSize:14}}>
+      <td className="entry-val-col" style={{padding:"10px 12px",fontSize:14}}>
         <div style={{display:"flex",flexDirection:"column",gap:3}}>
           {entry.actual!=null
             ? <div style={{display:"flex",flexDirection:"column",gap:2}}>
@@ -423,7 +426,7 @@ function CreditCardWidget({ monthData, onUpdateMonth, monthIdx, allYearData, onU
       id: idx>=0?newDesp[idx].id:uid(),
       desc:"Cartão de Crédito",
       planned: newPlanned!=null?newPlanned:(idx>=0?newDesp[idx].planned:0),
-      actual:  null, // no mês dos gastos, NÃO é realizado ainda
+      actual:  idx>=0?newDesp[idx].actual:null, // preserva o actual já existente no mês atual
       recurrent:false,
     };
     if(idx>=0) newDesp[idx]=curEntry; else newDesp.push(curEntry);
@@ -630,6 +633,7 @@ function CreditCardWidget({ monthData, onUpdateMonth, monthIdx, allYearData, onU
 
 // ─── Month Panel ──────────────────────────────────────────────────────────────
 function MonthPanel({ monthData, monthIdx, year, onUpdateMonth, cumPlanned, cumActual, allYearData, onUpdateYear }) {
+  const isMobile = useIsMobile();
   const [desc,setDesc]       = useState("");
   const [val,setVal]         = useState("");
   const [addType,setAddType] = useState("receita");
@@ -954,9 +958,7 @@ function MonthPanel({ monthData, monthIdx, year, onUpdateMonth, cumPlanned, cumA
           <ResponsiveContainer width="100%" height={170}>
             <BarChart data={barData} margin={{top:4,right:4,left:0,bottom:0}}>
               <CartesianGrid strokeDasharray="3 3" stroke="#0a1628"/>
-              <XAxis dataKey="name" tick={{fill:C.textDim,fontSize:12}} axisLine={false} tickLine={false}/>
-              <YAxis tick={{fill:C.textDim,fontSize:11}} tickFormatter={fmtK} axisLine={false} tickLine={false}/>
-              <Tooltip formatter={v=>fmt(v)} cursor={{fill:"#1e3a5f22"}}
+              <XAxis dataKey="name" tick={isMobile?false:{fill:C.textDim,fontSize:12}} axisLine={false} tickLine={false}/>
                 contentStyle={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,fontSize:13}}/>
               <Bar dataKey="Planejado" fill="#1e3a5f" radius={[5,5,0,0]}/>
               <Bar dataKey="Realizado" fill={C.red} radius={[5,5,0,0]}/>
@@ -970,6 +972,7 @@ function MonthPanel({ monthData, monthIdx, year, onUpdateMonth, cumPlanned, cumA
 
 // ─── Annual View ──────────────────────────────────────────────────────────────
 function AnnualView({ yearData, year }) {
+  const isMobile = useIsMobile();
   let cumP=0, cumA=0;
   const rows = MONTHS.map((m,i)=>{
     const s=calcMonthForDisplay(yearData.months[i]||emptyMonth(), year, i);
@@ -1050,9 +1053,7 @@ function AnnualView({ yearData, year }) {
                 </linearGradient>
               </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="#0a1628"/>
-              <XAxis dataKey="name" tick={{fill:C.textDim,fontSize:12}} axisLine={false} tickLine={false}/>
-              <YAxis tick={{fill:C.textDim,fontSize:11}} tickFormatter={fmtK} axisLine={false} tickLine={false}/>
-              <ReferenceLine y={0} stroke={C.border} strokeDasharray="3 3"/>
+              <XAxis dataKey="name" tick={isMobile?false:{fill:C.textDim,fontSize:12}} axisLine={false} tickLine={false}/>
               <Tooltip formatter={v=>fmt(v)} contentStyle={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,fontSize:13}}/>
               <Legend iconType="circle" wrapperStyle={{fontSize:12,color:C.textMid}}/>
               <Area type="monotone" dataKey="Acum. Plan." stroke={C.blue} fill="url(#gP)" strokeWidth={2} strokeDasharray="5 5" dot={false}/>
@@ -1069,7 +1070,7 @@ function AnnualView({ yearData, year }) {
           <ResponsiveContainer width="100%" height={200}>
             <BarChart data={barData} margin={{top:4,right:4,left:0,bottom:0}}>
               <CartesianGrid strokeDasharray="3 3" stroke="#0a1628"/>
-              <XAxis dataKey="name" tick={{fill:C.textDim,fontSize:12}} axisLine={false} tickLine={false}/>
+              <XAxis dataKey="name" tick={isMobile?false:{fill:C.textDim,fontSize:12}} axisLine={false} tickLine={false}/>
               <YAxis tick={{fill:C.textDim,fontSize:11}} tickFormatter={fmtK} axisLine={false} tickLine={false}/>
               <ReferenceLine y={0} stroke={C.border}/>
               <Tooltip formatter={(v,n)=>[fmt(v),n]} contentStyle={{background:C.card,border:`1px solid ${C.border}`,borderRadius:10,fontSize:13}}/>
@@ -1086,14 +1087,14 @@ function AnnualView({ yearData, year }) {
           display:"flex",alignItems:"center",gap:8}}>
           <span style={{fontSize:20}}>📋</span>
           <span style={{fontSize:12,color:C.textMid,fontWeight:800,letterSpacing:0.6,textTransform:"uppercase"}}>
-            Resumo Mensal com Saldo Acumulado
+            Resumo Mensal
           </span>
         </div>
         <div style={{overflowX:"auto"}}>
           <table style={{width:"100%",borderCollapse:"collapse",minWidth:400}}>
             <thead>
               <tr style={{background:"#05080f"}}>
-                {["📅 Mês","Saldo Real.","Acum. Real.","Desvio Acum.","💸 Gastos"].map(h=>(
+                {["📅 Mês","Saldo Real.","💸 Gastos"].map(h=>(
                   <th key={h} style={{padding:"11px 14px",textAlign:"left",fontSize:11,
                     color:C.textDim,fontWeight:700,letterSpacing:0.6,whiteSpace:"nowrap"}}>{h}</th>
                 ))}
@@ -1101,11 +1102,8 @@ function AnnualView({ yearData, year }) {
             </thead>
             <tbody>
               {rows.map((r,i)=>{
-                const dev=r.cumA-r.cumP;
                 const isFuture = isFutureMonth(year, i);
                 const colVal  = isFuture ? C.textFaint : (r.actual>=0  ? C.green : C.red);
-                const colCum  = isFuture ? C.textFaint : (r.cumA>=0    ? C.green : C.red);
-                const colDev  = isFuture ? C.textFaint : (dev>=0       ? C.green : C.red);
                 return (
                   <tr key={i} className="row-hover" style={{borderBottom:`1px solid ${C.border}1a`,
                     opacity: isFuture ? 0.55 : 1}}>
@@ -1113,12 +1111,6 @@ function AnnualView({ yearData, year }) {
                       {MONTHS_FULL[i]}{isFuture && <span style={{fontSize:10,color:C.textFaint,marginLeft:6}}>planejado</span>}
                     </td>
                     <td style={{padding:"12px 14px",fontSize:14,fontWeight:700,color:colVal}}>{fmt(r.actual)}</td>
-                    <td style={{padding:"12px 14px",fontSize:14,fontWeight:800,color:colCum}}>{fmt(r.cumA)}</td>
-                    <td style={{padding:"12px 14px",fontSize:14,fontWeight:800,color:colDev}}>
-                      <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
-                        {!isFuture && <span>{dev>=0?"📈":"📉"}</span>}{fmt(Math.abs(dev))}
-                      </span>
-                    </td>
                     <td style={{padding:"12px 14px"}}>
                       {isFuture
                         ? <span style={{color:C.textFaint,fontSize:12}}>—</span>
