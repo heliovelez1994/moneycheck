@@ -414,30 +414,40 @@ function CreditCardWidget({ monthData, onUpdateMonth, monthIdx, allYearData, onU
 
   const charges    = monthData.ccCharges||[];
   const totalCharges = charges.reduce((s,c)=>s+c.value,0);
-  const cartaoEntry  = monthData.despesas.find(e=>e.desc==="Cartão de Crédito");
-  const planned      = cartaoEntry?.planned||0;
-  const pctRaw       = planned>0?(totalCharges/planned)*100:0;
-  const pct          = Math.min(pctRaw,100);
-  const barColor     = pctRaw>100?C.red:pctRaw>=90?C.orange:pctRaw>=75?C.yellow:C.green;
 
-  // Sincroniza ccCharges no mês atual E lança o actual no mês SEGUINTE (mês de pagamento da fatura)
-  const syncDespesas = (newCharges, newPlanned) => {
+  // planned do mês SEGUINTE (onde a fatura vai cair)
+  const nextMonthData  = monthIdx < 11 ? (allYearData?.months[monthIdx+1]||emptyMonth()) : null;
+  const nextCCEntry    = nextMonthData?.despesas?.find(e=>e.desc==="Cartão de Crédito");
+  const plannedNext    = nextCCEntry?.planned||0;
+
+  // planned do mês ATUAL (para exibir na linha de despesas abaixo)
+  const cartaoEntry  = monthData.despesas.find(e=>e.desc==="Cartão de Crédito");
+  const plannedCur   = cartaoEntry?.planned||0;
+
+  // Para barra de progresso e "RESTA", usa o planejado do mês seguinte
+  const planned    = plannedNext;
+  const pctRaw     = planned>0?(totalCharges/planned)*100:0;
+  const pct        = Math.min(pctRaw,100);
+  const barColor   = pctRaw>100?C.red:pctRaw>=90?C.orange:pctRaw>=75?C.yellow:C.green;
+
+  // Sincroniza ccCharges no mês atual E lança o actual (e o planned, se alterado) no mês SEGUINTE
+  const syncDespesas = (newCharges, newPlannedNext) => {
     const total = newCharges.reduce((s,c)=>s+c.value,0);
 
-    // 1. Atualiza ccCharges e o planejado do cartão no mês atual (sem mexer no actual deste mês)
+    // 1. Atualiza ccCharges no mês atual, preservando planned e actual da entrada CC atual
     let newDesp = [...monthData.despesas];
     const idx   = newDesp.findIndex(e=>e.desc==="Cartão de Crédito");
     const curEntry = {
       id: idx>=0?newDesp[idx].id:uid(),
       desc:"Cartão de Crédito",
-      planned: newPlanned!=null?newPlanned:(idx>=0?newDesp[idx].planned:0),
-      actual:  idx>=0?newDesp[idx].actual:null, // preserva o actual já existente no mês atual
+      planned: idx>=0?newDesp[idx].planned:0,  // mantém planned do mês atual inalterado
+      actual:  idx>=0?newDesp[idx].actual:null,
       recurrent:false,
     };
     if(idx>=0) newDesp[idx]=curEntry; else newDesp.push(curEntry);
     const updatedCurrentMonth = {...monthData, ccCharges:newCharges, despesas:newDesp};
 
-    // 2. Lança o total como actual no mês SEGUINTE (fatura)
+    // 2. Lança o total como actual E (se fornecido) o newPlannedNext como planned no mês SEGUINTE
     if(monthIdx < 11 && allYearData && onUpdateYear) {
       const nextMonthIdx = monthIdx + 1;
       const updatedYear = { months: {...allYearData.months} };
@@ -449,7 +459,7 @@ function CreditCardWidget({ monthData, onUpdateMonth, monthIdx, allYearData, onU
       const nextEntry = {
         id: nextIdx>=0?nextDesp[nextIdx].id:uid(),
         desc:"Cartão de Crédito",
-        planned: nextIdx>=0?nextDesp[nextIdx].planned:0,
+        planned: newPlannedNext!=null ? newPlannedNext : (nextIdx>=0?nextDesp[nextIdx].planned:0),
         actual: total>0?total:null,
         recurrent:false,
       };
@@ -477,7 +487,7 @@ function CreditCardWidget({ monthData, onUpdateMonth, monthIdx, allYearData, onU
 
   const savePlan = () => {
     const v=parseFloat(planInput)||0;
-    syncDespesas(charges,v);
+    syncDespesas(charges, v); // v vai para o planned do mês seguinte
     setEditPlan(false);
   };
 
@@ -504,9 +514,9 @@ function CreditCardWidget({ monthData, onUpdateMonth, monthIdx, allYearData, onU
           </div>
         </div>
         <div style={{display:"flex",gap:14,alignItems:"center",flexWrap:"wrap"}}>
-          {/* Planned value */}
+          {/* Planned value — mostra o previsto do MÊS SEGUINTE (quando a fatura cai) */}
           <div>
-            <div style={{fontSize:11,color:C.textDim,fontWeight:600,marginBottom:2}}>PREVISTO NO MÊS</div>
+            <div style={{fontSize:11,color:C.textDim,fontWeight:600,marginBottom:2}}>PREVISTO NO MÊS SEGUINTE</div>
             {editPlan?(
               <div style={{display:"flex",gap:6,alignItems:"center"}}>
                 <input type="number" value={planInput} onChange={e=>setPlanInput(e.target.value)}
@@ -518,9 +528,9 @@ function CreditCardWidget({ monthData, onUpdateMonth, monthIdx, allYearData, onU
               </div>
             ):(
               <div style={{display:"flex",alignItems:"center",gap:6,cursor:"pointer"}}
-                onClick={()=>{setPlanInput(planned||"");setEditPlan(true);}}>
+                onClick={()=>{setPlanInput(plannedNext||"");setEditPlan(true);}}>
                 <span style={{fontSize:18,fontWeight:900,color:C.textDim}}>
-                  {planned?fmt(planned):"Definir →"}
+                  {plannedNext?fmt(plannedNext):"Definir →"}
                 </span>
                 <span style={{fontSize:11,color:C.textFaint}}>✎</span>
               </div>
@@ -1382,4 +1392,3 @@ useEffect(() => {
     </>
   );
 }
-
