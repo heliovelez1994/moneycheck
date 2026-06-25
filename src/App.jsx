@@ -123,6 +123,8 @@ const STYLES = `
 
   /* ── Responsivo mobile ── */
   @media (max-width: 640px) {
+    .mobile-year-row { display: flex !important; }
+    .mobile-annual-year { display: flex !important; }
     .hero-grid   { flex-direction: column !important; }
     .tables-grid { grid-template-columns: 1fr !important; }
     .annual-charts-grid { grid-template-columns: 1fr !important; }
@@ -156,6 +158,7 @@ const STYLES = `
   @media (min-width: 641px) {
     .mobile-plan { display: none !important; }
     .mobile-btns { display: none !important; }
+    .mobile-annual-year { display: none !important; }
   }
 `;
 
@@ -1307,8 +1310,17 @@ useEffect(() => {
 
         {/* ── Month tabs ── */}
         {view==="month" && (
-          <div style={{background:`${C.surface}dd`,borderBottom:`1px solid ${C.border}`,
-            display:"flex",overflowX:"auto",padding:"0 20px",scrollbarWidth:"none"}}>
+          <div style={{background:`${C.surface}dd`,borderBottom:`1px solid ${C.border}`,scrollbarWidth:"none"}}>
+            {/* Year selector — mobile only */}
+            <div className="mobile-year-row" style={{display:"none",alignItems:"center",justifyContent:"center",
+              gap:8,padding:"8px 20px 0",borderBottom:`1px solid ${C.border}22`}}>
+              <button onClick={()=>setYear(y=>y-1)} className="btn-hover"
+                style={{background:"none",border:"none",color:C.textMid,cursor:"pointer",fontSize:22,padding:"0 4px",lineHeight:1}}>‹</button>
+              <span style={{color:C.text,fontWeight:900,fontSize:15,minWidth:46,textAlign:"center"}}>{year}</span>
+              <button onClick={()=>setYear(y=>y+1)} className="btn-hover"
+                style={{background:"none",border:"none",color:C.textMid,cursor:"pointer",fontSize:22,padding:"0 4px",lineHeight:1}}>›</button>
+            </div>
+            <div style={{display:"flex",overflowX:"auto",padding:"0 20px",scrollbarWidth:"none"}}>
             {MONTHS.map((m,i)=>{
               const s=calcMonthForDisplay(yd.months[i]||emptyMonth(), year, i);
               const hasData=(yd.months[i]?.receitas?.length||0)+(yd.months[i]?.despesas?.length||0)>0;
@@ -1338,6 +1350,7 @@ useEffect(() => {
                 </button>
               );
             })}
+            </div>
           </div>
         )}
 
@@ -1375,10 +1388,20 @@ useEffect(() => {
                   background:`linear-gradient(135deg,${C.purple}30,${C.blue}20)`,
                   border:`1px solid ${C.purple}30`,
                   display:"flex",alignItems:"center",justifyContent:"center",fontSize:22}}>📊</div>
-                <div>
-                  <h2 style={{margin:0,fontSize:22,fontWeight:900,color:C.text,letterSpacing:-0.5}}>
-                    Visão Anual — {year}
-                  </h2>
+                <div style={{flex:1,minWidth:0}}>
+                  <div style={{display:"flex",alignItems:"center",gap:10,flexWrap:"wrap"}}>
+                    <h2 style={{margin:0,fontSize:22,fontWeight:900,color:C.text,letterSpacing:-0.5}}>
+                      Visão Anual — {year}
+                    </h2>
+                    {/* Year controls — annual view mobile only */}
+                    <div className="mobile-annual-year" style={{display:"none",alignItems:"center",gap:4,
+                      background:C.card,border:`1px solid ${C.border}`,borderRadius:10,padding:"3px 8px"}}>
+                      <button onClick={()=>setYear(y=>y-1)} className="btn-hover"
+                        style={{background:"none",border:"none",color:C.textMid,cursor:"pointer",fontSize:20,padding:"0 2px",lineHeight:1}}>‹</button>
+                      <button onClick={()=>setYear(y=>y+1)} className="btn-hover"
+                        style={{background:"none",border:"none",color:C.textMid,cursor:"pointer",fontSize:20,padding:"0 2px",lineHeight:1}}>›</button>
+                    </div>
+                  </div>
                   <span style={{fontSize:12,color:C.textDim,fontWeight:700,letterSpacing:0.8}}>
                     RESUMO & PROJEÇÕES
                   </span>
@@ -1392,3 +1415,4 @@ useEffect(() => {
     </>
   );
 }
+
